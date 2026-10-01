@@ -1,3 +1,2 @@
 Django>=6.0,<7.0
 tornado>=6.5,<7.0
-honcho>=2.0,<3.0
