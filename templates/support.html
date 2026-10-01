@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-section">
+  <div class="container narrow">
+    <div class="section-heading left">
+      <span class="eyebrow">Virtual learning</span>
+      <h2>Live classroom schedule</h2>
+    </div>
+
+    <div class="class-list">
+      {% for school_class in classes %}
+      <article class="class-card">
+        <div class="class-header">
+          <div>
+            <span class="tag {% if school_class.status == 'Live' %}success{% else %}warning{% endif %}">{{ school_class.status }}</span>
+            <h3>{{ school_class.title }}</h3>
+          </div>
+          <a href="{{ school_class.meeting_url }}" target="_blank" class="btn btn-primary small">Join</a>
+        </div>
+        <p><strong>Teacher:</strong> {{ school_class.teacher_name }}</p>
+        <p><strong>Subject:</strong> {{ school_class.subject }}</p>
+        <p><strong>Time:</strong> {{ school_class.start_time }} - {{ school_class.end_time }}</p>
+        <p><strong>Recurrence:</strong> {{ school_class.recurrence }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

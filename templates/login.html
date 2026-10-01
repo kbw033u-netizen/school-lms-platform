@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">Future-ready school portal</span>
+      <h1>Learning, payments, and live classrooms in one digital experience.</h1>
+      <p>
+        BrightPath Academy brings together virtual lessons, school billing, academic resources,
+        and parent communication in one secure online platform.
+      </p>
+      <div class="hero-actions">
+        <a href="/login" class="btn btn-primary">Student Login</a>
+        <a href="/contact" class="btn btn-secondary">Contact School</a>
+      </div>
+      <div class="stats-row">
+        <div>
+          <strong>3,500+</strong>
+          <span>Active learners</span>
+        </div>
+        <div>
+          <strong>120+</strong>
+          <span>Teachers</span>
+        </div>
+        <div>
+          <strong>99.2%</strong>
+          <span>Parent satisfaction</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="mini-panel">
+        <span class="tag success">Live now</span>
+        <h3>Biology Practical Lab</h3>
+        <p>9:00 AM - 10:00 AM</p>
+        <button class="btn btn-primary">Join Class</button>
+      </div>
+      <div class="mini-panel subtle">
+        <span class="tag warning">Fee reminder</span>
+        <h3>Term 2 Invoice</h3>
+        <p>Balance due: KES 18,000</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features container">
+  <div class="section-heading">
+    <span class="eyebrow">Everything your school needs</span>
+    <h2>Built for learners, parents, teachers, and admin.</h2>
+  </div>
+  <div class="feature-grid">
+    <article class="feature-card">
+      <div class="icon">🎓</div>
+      <h3>Role-based portals</h3>
+      <p>Separate experiences for admin, teachers, learners, and parents with secure dashboards and permissions.</p>
+    </article>
+    <article class="feature-card">
+      <div class="icon">💻</div>
+      <h3>Live virtual classes</h3>
+      <p>Schedule sessions, join via meeting links, raise hands, chat, and track attendance in real time.</p>
+    </article>
+    <article class="feature-card">
+      <div class="icon">💳</div>
+      <h3>Automated school billing</h3>
+      <p>Generate fees, track balances, process payments, and send reminders to parents automatically.</p>
+    </article>
+    <article class="feature-card">
+      <div class="icon">📚</div>
+      <h3>Digital library</h3>
+      <p>Access notes, revision guides, exam papers, e-books, and subject resources with quick search filters.</p>
+    </article>
+  </div>
+</section>
+
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <span class="eyebrow">Support desk</span>
+      <h2>Need help with fees, library access, or class attendance?</h2>
+    </div>
+    <a href="/support" class="btn btn-primary">Send a Ticket</a>
+  </div>
+</section>
+{% endblock %}

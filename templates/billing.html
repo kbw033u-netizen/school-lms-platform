@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-section">
+  <div class="container narrow">
+    <div class="section-heading left">
+      <span class="eyebrow">Resource center</span>
+      <h2>Digital library and exam resources</h2>
+    </div>
+
+    <div class="resource-grid">
+      {% for resource in resources %}
+      <article class="resource-card">
+        <div class="resource-top">
+          <span class="tag">{{ resource.resource_type }}</span>
+        </div>
+        <h3>{{ resource.title }}</h3>
+        <p>{{ resource.subject }} • {{ resource.grade_level }}</p>
+        <div class="meta-row">
+          <span>Term: {{ resource.term }}</span>
+          <span>Year: {{ resource.academic_year }}</span>
+        </div>
+        <a href="{{ resource.file_url }}" class="btn btn-primary small">Download</a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title if title else 'BrightPath Academy' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <div class="brand">
+          <span class="brand-mark">B</span>
+          <span>BrightPath Academy</span>
+        </div>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/library">Library</a>
+          <a href="/classes">Classes</a>
+          <a href="/billing">Billing</a>
+          <a href="/support">Support</a>
+          {% if request.session.get('user_id') %}
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout" class="btn btn-light">Logout</a>
+          {% else %}
+            <a href="/login" class="btn btn-primary">Login</a>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <h4>BrightPath Academy</h4>
+          <p>Inspiring learners to achieve excellence in academics, leadership, and life skills.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/library">Digital Library</a></li>
+            <li><a href="/classes">Virtual Classes</a></li>
+            <li><a href="/support">Support Desk</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <ul>
+            <li>Phone / WhatsApp: 0721954896</li>
+            <li>Email: support@brightpath.ac.ke</li>
+            <li>Address: 21 Learning Avenue, Nairobi</li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
