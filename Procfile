@@ -1,1 +1,1 @@
-web: python manage.py migrate --noinput && python manage.py seed_school_data && python -m config.tornado_server
+web: python manage.py migrate --noinput && python manage.py seed_school_data && python manage.py runserver 127.0.0.1:8000

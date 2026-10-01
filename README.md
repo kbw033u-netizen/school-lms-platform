@@ -14,7 +14,7 @@ cp .env.example .env
 honcho start
 ```
 
-Honcho runs Django migrations, seeds the demo data, and starts Tornado on http://127.0.0.1:8000.
+Honcho runs Django migrations, seeds the demo data, and starts the Django development server on http://127.0.0.1:8000.
 
 Demo accounts:
 
