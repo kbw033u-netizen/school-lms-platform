@@ -1,44 +1,11 @@
 {% extends 'base.html' %}
 
+{% block title %}Billing | Wazito Schools{% endblock %}
 {% block content %}
-<section class="page-section">
-  <div class="container support-grid">
-    <div class="support-info">
-      <span class="eyebrow">Contact and support</span>
-      <h2>Get help from the Wazito Schools admin desk.</h2>
-      <div class="contact-box">
-        <h3>School Support</h3>
-        <p><strong>Phone / WhatsApp:</strong> 0721954896</p>
-        <p><strong>Email:</strong> support@wazitoschools.ac.ke</p>
-        <p><strong>Office Hours:</strong> Mon - Fri, 8:00 AM - 5:00 PM</p>
-      </div>
-    </div>
-
-    <div class="auth-card support-form">
-      {% if request.query_params.get('success') %}
-      <div class="success-note">Your support ticket has been submitted successfully.</div>
-      {% endif %}
-      <h3>Submit a query</h3>
-      <form method="post" action="/support">
-        <label>
-          Full name
-          <input type="text" name="user_name" required />
-        </label>
-        <label>
-          Email
-          <input type="email" name="user_email" required />
-        </label>
-        <label>
-          Subject
-          <input type="text" name="subject" required />
-        </label>
-        <label>
-          Message
-          <textarea name="message" rows="5" required></textarea>
-        </label>
-        <button type="submit" class="btn btn-primary full">Send Ticket</button>
-      </form>
-    </div>
-  </div>
-</section>
+<section class="page-section"><div class="container narrow">
+  <div class="section-heading left"><span class="eyebrow">Fee management</span><h2>School billing and payment overview</h2></div>
+  <div class="panel full-width"><table class="data-table"><thead><tr><th>Student</th><th>Invoice</th><th>Term</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody>
+    {% for invoice in invoices %}<tr><td>{{ invoice.student_name }}</td><td>{{ invoice.invoice_number }}</td><td>{{ invoice.term }}</td><td>KES {{ invoice.total_amount|floatformat:2 }}</td><td>KES {{ invoice.amount_paid|floatformat:2 }}</td><td>KES {{ invoice.balance|floatformat:2 }}</td><td><span class="tag {% if invoice.status == 'Pending' %}warning{% else %}success{% endif %}">{{ invoice.status }}</span></td></tr>{% empty %}<tr><td colspan="7">No invoices found.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div></section>
 {% endblock %}

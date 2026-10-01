@@ -1,41 +1,9 @@
 {% extends 'base.html' %}
 
+{% block title %}Classes | Wazito Schools{% endblock %}
 {% block content %}
-<section class="page-section">
-  <div class="container narrow">
-    <div class="section-heading left">
-      <span class="eyebrow">Fee management</span>
-      <h2>School billing and payment overview</h2>
-    </div>
-
-    <div class="panel full-width">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Invoice</th>
-            <th>Term</th>
-            <th>Total</th>
-            <th>Paid</th>
-            <th>Balance</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for invoice in invoices %}
-          <tr>
-            <td>{{ invoice.student_name }}</td>
-            <td>{{ invoice.invoice_number }}</td>
-            <td>{{ invoice.term }}</td>
-            <td>KES {{ '%.2f'|format(invoice.total_amount) }}</td>
-            <td>KES {{ '%.2f'|format(invoice.amount_paid) }}</td>
-            <td>KES {{ '%.2f'|format(invoice.balance) }}</td>
-            <td><span class="tag {% if invoice.status == 'Pending' %}warning{% else %}success{% endif %}">{{ invoice.status }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+<section class="page-section"><div class="container">
+  <div class="section-heading left"><span class="eyebrow">Timetable</span><h2>Virtual classes</h2></div>
+  <div class="feature-grid">{% for school_class in classes %}<article class="feature-card"><span class="tag {% if school_class.status == 'Live' %}success{% else %}warning{% endif %}">{{ school_class.status }}</span><h3>{{ school_class.title }}</h3><p>{{ school_class.subject }} / {{ school_class.teacher_name }}</p><p>{{ school_class.start_time }} - {{ school_class.end_time }} / {{ school_class.recurrence }}</p><a href="{{ school_class.meeting_url }}">Join class</a></article>{% empty %}<p>No classes are scheduled yet.</p>{% endfor %}</div>
+</div></section>
 {% endblock %}

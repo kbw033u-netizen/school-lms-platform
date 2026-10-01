@@ -1,0 +1,1 @@
+"""Soma Link demo project configuration."""

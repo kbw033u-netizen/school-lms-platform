@@ -1,0 +1,1 @@
+"""Wazito Schools portal application."""

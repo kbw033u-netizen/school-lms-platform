@@ -1,64 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ title if title else 'Wazito Schools' }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="container nav">
-        <div class="brand">
-          <span class="brand-mark">W</span>
-          <span>Wazito Schools</span>
-        </div>
-        <nav>
-          <a href="/">Home</a>
-          <a href="/library">Library</a>
-          <a href="/classes">Classes</a>
-          <a href="/billing">Billing</a>
-          <a href="/support">Support</a>
-          {% if request.session.get('user_id') %}
-            <a href="/dashboard">Dashboard</a>
-            <a href="/logout" class="btn btn-light">Logout</a>
-          {% else %}
-            <a href="/login" class="btn btn-primary">Login</a>
-          {% endif %}
-        </nav>
-      </div>
-    </header>
+{% extends 'base.html' %}
 
-    <main>
-      {% block content %}{% endblock %}
-    </main>
-
-    <footer class="site-footer">
-      <div class="container footer-grid">
-        <div>
-          <h4>Wazito Schools</h4>
-          <p>Inspiring learners to achieve excellence in academics, leadership, and life skills.</p>
-        </div>
-        <div>
-          <h4>Quick Links</h4>
-          <ul>
-            <li><a href="/library">Digital Library</a></li>
-            <li><a href="/classes">Virtual Classes</a></li>
-            <li><a href="/support">Support Desk</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Contact</h4>
-          <ul>
-            <li>Phone / WhatsApp: 0721954896</li>
-            <li>Email: support@wazitoschools.ac.ke</li>
-            <li>Address: 21 Learning Avenue, Nairobi</li>
-          </ul>
-        </div>
-      </div>
-    </footer>
-  </body>
-</html>
+{% block title %}Wazito Schools{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">A future-ready school community</span>
+      <h1>Welcome to Wazito Schools.</h1>
+      <p>Wazito Schools brings together virtual lessons, school billing, academic resources, and parent communication in one secure digital platform.</p>
+      <div class="hero-actions"><a href="/login" class="btn btn-primary">Student Login</a><a href="/contact" class="btn btn-secondary">Contact School</a></div>
+      <div class="stats-row"><div><strong>3,500+</strong><span>Active learners</span></div><div><strong>120+</strong><span>Teachers</span></div><div><strong>99.2%</strong><span>Parent satisfaction</span></div></div>
+    </div>
+    <div class="hero-card">
+      <div class="mini-panel"><span class="tag success">Live now</span><h3>Biology Practical Lab</h3><p>9:00 AM - 10:00 AM</p><a class="btn btn-primary" href="/classes">View Classes</a></div>
+      <div class="mini-panel subtle"><span class="tag warning">Fee reminder</span><h3>Term 2 Invoice</h3><p>Balance due: KES 18,000</p></div>
+    </div>
+  </div>
+</section>
+<section class="features container">
+  <div class="section-heading"><span class="eyebrow">Everything your school needs</span><h2>Built for learners, parents, teachers, and admin.</h2></div>
+  <div class="feature-grid">
+    <article class="feature-card"><div class="icon">🎓</div><h3>Role-based portals</h3><p>Separate experiences for admin, teachers, learners, and parents with secure dashboards and permissions.</p></article>
+    <article class="feature-card"><div class="icon">💻</div><h3>Live virtual classes</h3><p>Schedule sessions, join via meeting links, raise hands, chat, and track attendance in real time.</p></article>
+    <article class="feature-card"><div class="icon">💳</div><h3>Automated school billing</h3><p>Generate fees, track balances, process payments, and send reminders to parents automatically.</p></article>
+    <article class="feature-card"><div class="icon">📚</div><h3>Digital library</h3><p>Access notes, revision guides, exam papers, e-books, and subject resources with quick search filters.</p></article>
+  </div>
+</section>
+<section class="cta-banner"><div class="container cta-inner"><div><span class="eyebrow">Support desk</span><h2>Need help with fees, library access, or class attendance?</h2></div><a href="/support" class="btn btn-primary">Send a Ticket</a></div></section>
+{% endblock %}

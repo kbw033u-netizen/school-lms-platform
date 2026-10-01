@@ -1,92 +1,23 @@
 {% extends 'base.html' %}
 
+{% block title %}Library | Wazito Schools{% endblock %}
 {% block content %}
-<section class="dashboard">
-  <div class="container dashboard-shell">
-    <aside class="sidebar">
-      <h3>{{ user.first_name }} {{ user.last_name }}</h3>
-      <p>{{ user.role|capitalize }}</p>
-      <ul>
-        <li><a href="/dashboard">Overview</a></li>
-        <li><a href="/library">Library</a></li>
-        <li><a href="/classes">Classes</a></li>
-        <li><a href="/billing">Billing</a></li>
-        <li><a href="/support">Support</a></li>
-      </ul>
-    </aside>
-
-    <div class="dashboard-main">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span>Users</span>
-          <strong>{{ total_users }}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Classes</span>
-          <strong>{{ total_classes }}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Resources</span>
-          <strong>{{ total_resources }}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Invoices</span>
-          <strong>{{ total_invoices }}</strong>
+<section class="page-section"><div class="container">
+  <div class="section-heading left"><span class="eyebrow">Learning resources</span><h2>Digital library</h2></div>
+  <div class="feature-grid">{% for resource in resources %}<article class="feature-card"><span class="tag success">{{ resource.resource_type }}</span><h3>{{ resource.title }}</h3><p>{{ resource.subject }} / {{ resource.grade_level }}</p><p>{{ resource.term }} / {{ resource.academic_year }}</p>
+    {% if resource.resource_type|lower == 'video' %}
+      <div class="lesson-player" data-video-player>
+        <div class="video-viewport"><video src="{{ resource.file_url }}" controls preload="metadata" playsinline aria-label="{{ resource.title }}"></video></div>
+        <div class="video-zoom-controls" aria-label="Video zoom controls">
+          <button type="button" data-zoom-out aria-label="Zoom out" title="Zoom out">-</button>
+          <output data-zoom-status aria-live="polite">100%</output>
+          <button type="button" data-zoom-in aria-label="Zoom in" title="Zoom in">+</button>
+          <button type="button" data-zoom-reset>Reset zoom</button>
         </div>
       </div>
-
-      <div class="panel-grid">
-        <div class="panel">
-          <h3>Upcoming Classes</h3>
-          <ul class="list">
-            {% for school_class in classes[:3] %}
-              <li>
-                <strong>{{ school_class.title }}</strong>
-                <span>{{ school_class.start_time }} - {{ school_class.end_time }}</span>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        <div class="panel">
-          <h3>Recent Library Items</h3>
-          <ul class="list">
-            {% for resource in resources[:3] %}
-              <li>
-                <strong>{{ resource.title }}</strong>
-                <span>{{ resource.subject }} • {{ resource.grade_level }}</span>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-
-      <div class="panel full-width">
-        <h3>Billing Snapshot</h3>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Term</th>
-              <th>Total</th>
-              <th>Paid</th>
-              <th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for invoice in invoices %}
-            <tr>
-              <td>{{ invoice.invoice_number }}</td>
-              <td>{{ invoice.term }}</td>
-              <td>KES {{ '%.2f'|format(invoice.total_amount) }}</td>
-              <td>KES {{ '%.2f'|format(invoice.amount_paid) }}</td>
-              <td>KES {{ '%.2f'|format(invoice.balance) }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</section>
+    {% else %}
+      <a href="{{ resource.file_url }}">Open resource</a>
+    {% endif %}
+  </article>{% empty %}<p>No learning resources are available yet.</p>{% endfor %}</div>
+</div></section>
 {% endblock %}
