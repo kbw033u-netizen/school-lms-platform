@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from passlib.context import CryptContext
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 DATABASE_URL = "sqlite:///./school.db"
@@ -103,7 +103,7 @@ class SupportTicket(Base):
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="School LMS Portal")
+app = FastAPI(title="Wazito Schools Portal")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -269,13 +269,13 @@ def startup_event():
 def index(request: Request):
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "title": "BrightPath Academy"},
+        {"request": request, "title": "Wazito Schools"},
     )
 
 
 @app.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request, "title": "Login | Wazito Schools"})
 
 
 @app.post("/login")
@@ -322,6 +322,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "total_classes": total_classes,
             "total_resources": total_resources,
             "total_invoices": total_invoices,
+            "title": "Dashboard | Wazito Schools",
         },
     )
 
@@ -331,7 +332,7 @@ def library(request: Request, db: Session = Depends(get_db)):
     resources = db.query(ResourceMaterial).all()
     return templates.TemplateResponse(
         "library.html",
-        {"request": request, "resources": resources, "support_phone": "0721954896"},
+        {"request": request, "resources": resources, "support_phone": "0721954896", "title": "Library | Wazito Schools"},
     )
 
 
@@ -350,7 +351,7 @@ def billing(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse(
         "billing.html",
-        {"request": request, "user": current_user, "invoices": invoices},
+        {"request": request, "user": current_user, "invoices": invoices, "title": "Billing | Wazito Schools"},
     )
 
 
@@ -359,7 +360,7 @@ def classes_page(request: Request, db: Session = Depends(get_db)):
     classes = db.query(SchoolClass).all()
     return templates.TemplateResponse(
         "classes.html",
-        {"request": request, "classes": classes},
+        {"request": request, "classes": classes, "title": "Classes | Wazito Schools"},
     )
 
 
@@ -367,7 +368,7 @@ def classes_page(request: Request, db: Session = Depends(get_db)):
 def support_page(request: Request):
     return templates.TemplateResponse(
         "support.html",
-        {"request": request, "support_phone": "0721954896"},
+        {"request": request, "support_phone": "0721954896", "title": "Support | Wazito Schools"},
     )
 
 
@@ -395,7 +396,7 @@ def submit_support(
 def contact_page(request: Request):
     return templates.TemplateResponse(
         "support.html",
-        {"request": request, "support_phone": "0721954896", "contact_only": True},
+        {"request": request, "support_phone": "0721954896", "contact_only": True, "title": "Contact | Wazito Schools"},
     )
 
 
