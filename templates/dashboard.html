@@ -3,15 +3,15 @@
 {% block title %}Dashboard | Wazito Schools{% endblock %}
 {% block content %}
 <section class="dashboard"><div class="container dashboard-shell">
-  <aside class="sidebar"><h3>{{ user.first_name }} {{ user.last_name }}</h3><p>{{ user.role|title }}</p><ul><li><a href="/dashboard">Overview</a></li><li><a href="/library">Library</a></li><li><a href="/classes">Classes</a></li><li><a href="/billing">Billing</a></li><li><a href="/support">Support</a></li></ul></aside>
+  <aside class="sidebar"><h3>{{ user.first_name }} {{ user.last_name }}</h3><p>{{ user.role|title }}</p><ul><li><a href="/dashboard">Overview</a></li><li><a href="/library">Library</a></li><li><a href="/exams">Exams</a></li><li><a href="/classes">Classes</a></li><li><a href="/billing">Billing</a></li><li><a href="/support">Support</a></li></ul></aside>
   <div class="dashboard-main">
     <div class="stats-grid"><div class="stat-card"><span>Users</span><strong>{{ total_users }}</strong></div><div class="stat-card"><span>Classes</span><strong>{{ total_classes }}</strong></div><div class="stat-card"><span>Resources</span><strong>{{ total_resources }}</strong></div><div class="stat-card"><span>Invoices</span><strong>{{ total_invoices }}</strong></div></div>
     <div class="panel-grid">
       <div class="panel"><h3>Upcoming Classes</h3><ul class="list">{% for school_class in classes %}<li><strong>{{ school_class.title }}</strong><span>{{ school_class.start_time }} - {{ school_class.end_time }}</span></li>{% empty %}<li>No classes scheduled.</li>{% endfor %}</ul></div>
       <div class="panel"><h3>Recent Library Items</h3><ul class="list">{% for resource in resources %}<li><strong>{{ resource.title }}</strong><span>{{ resource.subject }} / {{ resource.grade_level }}</span></li>{% empty %}<li>No resources available.</li>{% endfor %}</ul></div>
     </div>
-    <div class="panel full-width"><h3>Billing Snapshot</h3><table class="data-table"><thead><tr><th>Invoice</th><th>Term</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>
-      {% for invoice in invoices %}<tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.term }}</td><td>KES {{ invoice.total_amount|floatformat:2 }}</td><td>KES {{ invoice.amount_paid|floatformat:2 }}</td><td>KES {{ invoice.balance|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">No invoices found.</td></tr>{% endfor %}
+    <div class="panel full-width"><h3>Billing Snapshot</h3><table class="data-table"><thead><tr><th>Invoice</th><th>Term</th><th>Total</th><th>Paid</th></tr></thead><tbody>
+      {% for invoice in invoices %}<tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.term }}</td><td>KES {{ invoice.total_amount|floatformat:2 }}</td><td>KES {{ invoice.amount_paid|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No invoices found.</td></tr>{% endfor %}
     </tbody></table></div>
   </div>
 </div></section>

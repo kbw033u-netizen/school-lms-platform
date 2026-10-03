@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Exams | Wazito Schools{% endblock %}
+{% block content %}
+<section class="page-section"><div class="container">
+  <div class="section-heading left"><span class="eyebrow">Assessment</span><h2>Exam papers</h2></div>
+  {% if is_staff %}
+  <div class="panel full-width">
+    <h3>Upload exam PDF</h3>
+    <form method="post" action="{% url 'exams' %}" enctype="multipart/form-data" class="pay-form">{% csrf_token %}
+      <input type="text" name="title" placeholder="Exam title" required />
+      <input type="text" name="subject" placeholder="Subject" required />
+      <input type="text" name="grade_level" placeholder="Grade level" required />
+      <input type="text" name="term" placeholder="Term" required />
+      <input type="text" name="academic_year" placeholder="Academic year" required />
+      <input type="file" name="pdf_file" accept="application/pdf,.pdf" required />
+      <button type="submit" class="btn btn-primary">Upload exam</button>
+    </form>
+  </div>
+  {% endif %}
+  <div class="feature-grid">{% for exam in exams %}<article class="feature-card"><span class="tag success">PDF</span><h3>{{ exam.title }}</h3><p>{{ exam.subject }} / {{ exam.grade_level }}</p><p>{{ exam.term }} / {{ exam.academic_year }}</p><p>Uploaded by {{ exam.uploaded_by }}</p><a href="{{ exam.pdf_file.url }}">Download exam</a></article>{% empty %}<p>No exams have been uploaded yet.</p>{% endfor %}</div>
+</div></section>
+{% endblock %}

@@ -52,6 +52,9 @@ class SchoolClass(models.Model):
     end_time = models.CharField(max_length=30)
     room_name = models.CharField(max_length=100)
     meeting_url = models.URLField(max_length=500)
+    zoom_meeting_id = models.CharField(max_length=30, blank=True)
+    zoom_passcode = models.CharField(max_length=30, blank=True)
+    zoom_start_url = models.URLField(max_length=1000, blank=True)
     status = models.CharField(max_length=30, default="scheduled")
     recurrence = models.CharField(max_length=50, default="One-off")
 
@@ -66,12 +69,43 @@ class Invoice(models.Model):
     due_date = models.CharField(max_length=30)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=30, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.invoice_number
+
+
+class Payment(models.Model):
+    METHOD_CHOICES = [
+        ("mpesa", "M-Pesa"),
+        ("card", "Card"),
+        ("bank", "Bank Transfer"),
+    ]
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="payments")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, default="mpesa")
+    reference = models.CharField(max_length=60, unique=True)
+    status = models.CharField(max_length=30, default="completed")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.reference
+
+
+class Exam(models.Model):
+    title = models.CharField(max_length=200)
+    subject = models.CharField(max_length=100)
+    grade_level = models.CharField(max_length=50)
+    term = models.CharField(max_length=50)
+    academic_year = models.CharField(max_length=10)
+    pdf_file = models.FileField(upload_to="exams/")
+    uploaded_by = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
 
 
 class SupportTicket(models.Model):

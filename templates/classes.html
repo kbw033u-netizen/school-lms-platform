@@ -3,7 +3,11 @@
 {% block title %}Classes | Wazito Schools{% endblock %}
 {% block content %}
 <section class="page-section"><div class="container">
-  <div class="section-heading left"><span class="eyebrow">Timetable</span><h2>Virtual classes</h2></div>
-  <div class="feature-grid">{% for school_class in classes %}<article class="feature-card"><span class="tag {% if school_class.status == 'Live' %}success{% else %}warning{% endif %}">{{ school_class.status }}</span><h3>{{ school_class.title }}</h3><p>{{ school_class.subject }} / {{ school_class.teacher_name }}</p><p>{{ school_class.start_time }} - {{ school_class.end_time }} / {{ school_class.recurrence }}</p><a href="{{ school_class.meeting_url }}">Join class</a></article>{% empty %}<p>No classes are scheduled yet.</p>{% endfor %}</div>
+  <div class="section-heading left"><span class="eyebrow">Timetable</span><h2>Live Zoom classes</h2></div>
+  <div class="feature-grid">{% for school_class in classes %}<article class="feature-card"><span class="tag {% if school_class.status == 'Live' %}success{% else %}warning{% endif %}">{{ school_class.status }}</span><h3>{{ school_class.title }}</h3><p>{{ school_class.subject }} / {{ school_class.teacher_name }}</p><p>{{ school_class.start_time }} - {{ school_class.end_time }} / {{ school_class.recurrence }}</p>
+    {% if school_class.zoom_meeting_id %}<p>Meeting ID: {{ school_class.zoom_meeting_id }}{% if school_class.zoom_passcode %} / Passcode: {{ school_class.zoom_passcode }}{% endif %}</p>{% endif %}
+    {% if school_class.status == 'Live' %}<a href="{{ school_class.meeting_url }}" class="btn btn-primary">Join live class</a>{% endif %}
+    {% if is_staff and school_class.status != 'Live' %}<form method="post" action="{% url 'class_go_live' school_class.id %}">{% csrf_token %}<button type="submit" class="btn btn-primary">Start Zoom lesson</button></form>{% endif %}
+  </article>{% empty %}<p>No classes are scheduled yet.</p>{% endfor %}</div>
 </div></section>
 {% endblock %}

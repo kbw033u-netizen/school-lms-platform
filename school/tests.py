@@ -1,7 +1,8 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import ResourceMaterial, SupportTicket, User
+from .models import Exam, Invoice, Payment, ResourceMaterial, SupportTicket, User
 
 
 class PortalTests(TestCase):
@@ -17,7 +18,7 @@ class PortalTests(TestCase):
         cls.user.save()
 
     def test_public_pages_render(self):
-        for page in ("index", "library", "classes", "support", "contact"):
+        for page in ("index", "library", "classes", "exams", "support", "contact"):
             with self.subTest(page=page):
                 self.assertEqual(self.client.get(reverse(page)).status_code, 200)
 
@@ -69,3 +70,60 @@ class PortalTests(TestCase):
         self.assertContains(response, "data-zoom-in")
         self.assertContains(response, "data-zoom-out")
         self.assertContains(response, "data-zoom-reset")
+
+    def test_invoice_payment_updates_status(self):
+        invoice = Invoice.objects.create(
+            student_name="Aisha Njeri",
+            invoice_number="INV-TEST-1",
+            term="Term 1",
+            due_date="2026-10-15",
+            total_amount=1000,
+            amount_paid=0,
+            status="Pending",
+        )
+        self.client.post(
+            reverse("login"),
+            {"email": "student@example.com", "password": "student-pass"},
+        )
+        response = self.client.post(
+            reverse("pay_invoice", args=[invoice.pk]),
+            {"amount": "1000", "method": "mpesa"},
+        )
+        self.assertRedirects(response, reverse("billing"))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.amount_paid, 1000)
+        self.assertEqual(invoice.status, "Paid")
+        self.assertEqual(Payment.objects.filter(invoice=invoice).count(), 1)
+
+    def test_exam_pdf_upload_requires_staff(self):
+        pdf = SimpleUploadedFile("exam.pdf", b"%PDF-1.4 demo", content_type="application/pdf")
+        response = self.client.post(reverse("exams"), {"title": "Midterm", "pdf_file": pdf})
+        self.assertRedirects(response, reverse("login"))
+        self.assertEqual(Exam.objects.count(), 0)
+
+        teacher = User(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        teacher.set_password("teacher-pass")
+        teacher.save()
+        self.client.post(
+            reverse("login"),
+            {"email": "teacher@example.com", "password": "teacher-pass"},
+        )
+        pdf = SimpleUploadedFile("exam.pdf", b"%PDF-1.4 demo", content_type="application/pdf")
+        response = self.client.post(
+            reverse("exams"),
+            {
+                "title": "Midterm",
+                "subject": "Mathematics",
+                "grade_level": "Grade 7",
+                "term": "Term 2",
+                "academic_year": "2026",
+                "pdf_file": pdf,
+            },
+        )
+        self.assertRedirects(response, reverse("exams"))
+        self.assertEqual(Exam.objects.count(), 1)

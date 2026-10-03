@@ -22,6 +22,7 @@ def make_application():
     return tornado.web.Application(
         [
             (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": str(settings.BASE_DIR / "static")}),
+            (r"/media/(.*)", tornado.web.StaticFileHandler, {"path": str(settings.MEDIA_ROOT)}),
             (r".*", tornado.web.FallbackHandler, {"fallback": django_container}),
         ]
     )

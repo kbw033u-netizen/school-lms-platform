@@ -66,10 +66,10 @@ class Command(BaseCommand):
             )
 
         invoices = [
-            ("INV-2026-001", "Term 1", "2026-10-15", 18000, 6000, 12000, "Partially Paid"),
-            ("INV-2026-002", "Term 2", "2026-11-18", 18000, 0, 18000, "Pending"),
+            ("INV-2026-001", "Term 1", "2026-10-15", 18000, 6000, "Partially Paid"),
+            ("INV-2026-002", "Term 2", "2026-11-18", 18000, 0, "Pending"),
         ]
-        for number, term, due_date, total, paid, balance, status in invoices:
+        for number, term, due_date, total, paid, status in invoices:
             Invoice.objects.get_or_create(
                 invoice_number=number,
                 defaults={
@@ -78,7 +78,6 @@ class Command(BaseCommand):
                     "due_date": due_date,
                     "total_amount": total,
                     "amount_paid": paid,
-                    "balance": balance,
                     "status": status,
                 },
             )
