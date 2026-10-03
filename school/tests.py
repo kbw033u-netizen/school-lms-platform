@@ -87,9 +87,14 @@ class PortalTests(TestCase):
         )
         response = self.client.post(
             reverse("pay_invoice", args=[invoice.pk]),
-            {"amount": "1000", "method": "mpesa"},
+            {"amount": "1000", "method": "mpesa", "phone": "0712345678"},
         )
-        self.assertRedirects(response, reverse("billing"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("mpesa_start"))
+        # Daraja is not configured in tests, so a demo payment is recorded.
+        response = self.client.get(reverse("mpesa_start"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("billing"))
         invoice.refresh_from_db()
         self.assertEqual(invoice.amount_paid, 1000)
         self.assertEqual(invoice.status, "Paid")

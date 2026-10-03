@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from . import paypal, stripe_card, zoom
+from . import mpesa, paypal, stripe_card, zoom
 from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
 
 
@@ -80,7 +80,8 @@ def billing(request):
         )
         if not invoices.exists():
             invoices = Invoice.objects.all()
-    return render(request, "billing.html", {"user": user, "invoices": invoices})
+    mpesa_pending = bool(request.session.get("mpesa_checkout_id"))
+    return render(request, "billing.html", {"user": user, "invoices": invoices, "mpesa_pending": mpesa_pending})
 
 
 def _record_payment(invoice, amount, method, reference):
@@ -123,8 +124,74 @@ def pay_invoice(request, invoice_id):
         request.session["card_invoice_id"] = invoice.pk
         request.session["card_method"] = method
         return redirect("card_start")
+    if method == "mpesa":
+        phone = mpesa.normalize_phone(request.POST.get("phone", ""))
+        if not phone:
+            messages.error(request, "Enter a valid M-Pesa phone number (e.g. 0712345678).")
+            return redirect("billing")
+        request.session["mpesa_amount"] = str(amount)
+        request.session["mpesa_invoice_id"] = invoice.pk
+        request.session["mpesa_phone"] = phone
+        return redirect("mpesa_start")
     _record_payment(invoice, amount, method, f"PAY-{uuid.uuid4().hex[:10].upper()}")
     messages.success(request, f"Payment of KES {amount} recorded for {invoice.invoice_number}.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def mpesa_start(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("mpesa_invoice_id"))
+    amount = Decimal(request.session.get("mpesa_amount", "0"))
+    phone = request.session.get("mpesa_phone", "")
+    if amount <= 0 or not phone:
+        messages.error(request, "No M-Pesa payment is in progress.")
+        return redirect("billing")
+    checkout_id, error = mpesa.stk_push(
+        amount,
+        phone,
+        invoice.invoice_number,
+        request.build_absolute_uri("/billing/mpesa/callback"),
+    )
+    if checkout_id is None and error is None:
+        # Daraja not configured: record a local demo payment instead.
+        _record_payment(invoice, amount, "mpesa", f"MP-DEMO-{uuid.uuid4().hex[:10].upper()}")
+        for key in ("mpesa_amount", "mpesa_invoice_id", "mpesa_phone"):
+            request.session.pop(key, None)
+        messages.success(request, f"Demo M-Pesa payment of KES {amount} recorded for {invoice.invoice_number}.")
+        return redirect("billing")
+    if error:
+        messages.error(request, f"M-Pesa request failed: {error}")
+        return redirect("billing")
+    request.session["mpesa_checkout_id"] = checkout_id
+    messages.success(request, f"M-Pesa prompt sent to {phone}. Enter your PIN, then confirm below.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def mpesa_status(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("mpesa_invoice_id"))
+    amount = Decimal(request.session.get("mpesa_amount", "0"))
+    checkout_id = request.session.get("mpesa_checkout_id", "")
+    paid = checkout_id and mpesa.stk_query(checkout_id)
+    for key in ("mpesa_amount", "mpesa_invoice_id", "mpesa_phone", "mpesa_checkout_id"):
+        request.session.pop(key, None)
+    if paid:
+        _record_payment(invoice, amount, "mpesa", f"MP-{checkout_id}")
+        messages.success(request, f"M-Pesa payment of KES {amount} confirmed for {invoice.invoice_number}.")
+    else:
+        messages.error(request, "M-Pesa payment not confirmed yet. Try again after entering your PIN.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def mpesa_callback(request):
+    # Placeholder endpoint for the Safaricom callback URL.
     return redirect("billing")
 
 

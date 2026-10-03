@@ -4,14 +4,15 @@
 {% block content %}
 <section class="page-section"><div class="container narrow">
   <div class="section-heading left"><span class="eyebrow">Fee management</span><h2>School billing and payment overview</h2></div>
+  {% if mpesa_pending %}<p class="panel full-width"><a href="{% url 'mpesa_status' %}" class="btn btn-primary">Confirm M-Pesa payment</a> after entering your PIN.</p>{% endif %}
   <div class="panel full-width"><table class="data-table"><thead><tr><th>Student</th><th>Invoice</th><th>Term</th><th>Total</th><th>Paid</th><th>Status</th><th>Pay</th></tr></thead><tbody>
     {% for invoice in invoices %}<tr><td>{{ invoice.student_name }}</td><td>{{ invoice.invoice_number }}</td><td>{{ invoice.term }}</td><td>KES {{ invoice.total_amount|floatformat:2 }}</td><td>KES {{ invoice.amount_paid|floatformat:2 }}</td><td><span class="tag {% if invoice.status == 'Pending' %}warning{% else %}success{% endif %}">{{ invoice.status }}</span></td><td>
       {% if invoice.status != 'Paid' %}<form method="post" action="{% url 'pay_invoice' invoice.id %}" class="pay-form">{% csrf_token %}
         <input type="number" name="amount" min="1" step="0.01" max="{{ invoice.total_amount|add:0 }}" placeholder="Amount" required />
+        <input type="tel" name="phone" placeholder="M-Pesa phone 0712..." />
         <select name="method"><option value="mpesa">M-Pesa</option><option value="paypal">PayPal</option><option value="visa">Visa</option><option value="card">Card (Mastercard / Amex / other)</option><option value="bank">Bank</option></select>
         <button type="submit" class="btn btn-primary">Pay now</button>
-      </form>{% if invoice.status != 'Paid' %}<small class="pay-hint">PayPal opens a secure checkout.</small>{% endif %}
-      </form>{% else %}Settled{% endif %}
+      </form><small class="pay-hint">M-Pesa sends an STK prompt to your phone. PayPal and card open a secure checkout.</small>{% else %}Settled{% endif %}
     </td></tr>{% empty %}<tr><td colspan="7">No invoices found.</td></tr>{% endfor %}
   </tbody></table></div>
 </div></section>
