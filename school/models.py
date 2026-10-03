@@ -79,6 +79,8 @@ class Invoice(models.Model):
 class Payment(models.Model):
     METHOD_CHOICES = [
         ("mpesa", "M-Pesa"),
+        ("paypal", "PayPal"),
+        ("visa", "Visa"),
         ("card", "Card"),
         ("bank", "Bank Transfer"),
     ]
