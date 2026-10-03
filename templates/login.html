@@ -3,7 +3,7 @@
 {% block title %}Login | Wazito Schools{% endblock %}
 {% block content %}
 <section class="auth-section"><div class="container auth-wrap"><div class="auth-card">
-  <span class="eyebrow">Welcome back</span><h2>Wazito Schools portal login</h2>
+  <span class="eyebrow">Welcome back</span><h2>{% if login_role == 'teacher' %}Teacher portal login{% else %}Wazito Schools portal login{% endif %}</h2>
   <form method="post" action="/login">
     {% csrf_token %}
     <label>Email<input type="email" name="email" placeholder="name@school.com" required /></label>

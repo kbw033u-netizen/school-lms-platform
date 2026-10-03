@@ -20,7 +20,7 @@
           {% if request.session.user_id %}
             <a href="/dashboard">Dashboard</a><a href="/logout" class="btn btn-light">Logout</a>
           {% else %}
-            <a href="/login" class="btn btn-primary">Login</a>
+            <a href="/login/teacher" class="btn btn-light">Teacher login</a><a href="/login" class="btn btn-primary">Login</a>
           {% endif %}
         </nav>
       </div>

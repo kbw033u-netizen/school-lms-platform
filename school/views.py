@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from . import zoom
+from . import paypal, zoom
 from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
 
 
@@ -19,6 +19,9 @@ def index(request):
 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
+    login_role = request.GET.get("role", "").strip().lower()
+    if request.path.rstrip("/").endswith("login/teacher"):
+        login_role = "teacher"
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
@@ -29,8 +32,8 @@ def login_view(request):
             request.session["role"] = user.role
             return redirect("dashboard")
         messages.error(request, "Invalid email or password.")
-        return render(request, "login.html", status=401)
-    return render(request, "login.html")
+        return render(request, "login.html", {"login_role": login_role}, status=401)
+    return render(request, "login.html", {"login_role": login_role})
 
 
 def logout_view(request):
@@ -80,33 +83,100 @@ def billing(request):
     return render(request, "billing.html", {"user": user, "invoices": invoices})
 
 
+def _record_payment(invoice, amount, method, reference):
+    Payment.objects.create(invoice=invoice, amount=amount, method=method, reference=reference)
+    invoice.amount_paid += amount
+    invoice.status = "Paid" if invoice.amount_paid >= invoice.total_amount else "Partially Paid"
+    invoice.save(update_fields=["amount_paid", "status"])
+
+
+def _validated_amount(request, invoice):
+    try:
+        amount = Decimal(request.POST.get("amount", "0")).quantize(Decimal("0.01"))
+    except InvalidOperation:
+        return None
+    remaining = invoice.total_amount - invoice.amount_paid
+    if amount <= 0 or amount > remaining:
+        return None
+    return amount
+
+
 @require_POST
 def pay_invoice(request, invoice_id):
     user = _current_user(request)
     if not user:
         return redirect("login")
     invoice = get_object_or_404(Invoice, pk=invoice_id)
-    try:
-        amount = Decimal(request.POST.get("amount", "0")).quantize(Decimal("0.01"))
-    except InvalidOperation:
-        amount = Decimal("0")
-    remaining = invoice.total_amount - invoice.amount_paid
-    if amount <= 0 or amount > remaining:
+    amount = _validated_amount(request, invoice)
+    if amount is None:
         messages.error(request, "Enter a valid payment amount up to the outstanding total.")
         return redirect("billing")
     method = request.POST.get("method", "mpesa")
     if method not in dict(Payment.METHOD_CHOICES):
         method = "mpesa"
-    Payment.objects.create(
-        invoice=invoice,
-        amount=amount,
-        method=method,
-        reference=f"PAY-{uuid.uuid4().hex[:10].upper()}",
-    )
-    invoice.amount_paid += amount
-    invoice.status = "Paid" if invoice.amount_paid >= invoice.total_amount else "Partially Paid"
-    invoice.save(update_fields=["amount_paid", "status"])
+    if method == "paypal":
+        request.session["paypal_amount"] = str(amount)
+        request.session["paypal_invoice_id"] = invoice.pk
+        return redirect("paypal_start")
+    _record_payment(invoice, amount, method, f"PAY-{uuid.uuid4().hex[:10].upper()}")
     messages.success(request, f"Payment of KES {amount} recorded for {invoice.invoice_number}.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def paypal_start(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("paypal_invoice_id"))
+    amount = Decimal(request.session.get("paypal_amount", "0"))
+    if amount <= 0:
+        messages.error(request, "No PayPal payment is in progress.")
+        return redirect("billing")
+    order_id, approve_url = paypal.create_order(
+        amount,
+        "USD",
+        request.build_absolute_uri("/billing/paypal/return"),
+        request.build_absolute_uri("/billing/paypal/cancel"),
+        invoice.invoice_number,
+    )
+    if not approve_url:
+        # PayPal not configured: record a local demo payment instead.
+        _record_payment(invoice, amount, "paypal", f"PP-DEMO-{uuid.uuid4().hex[:10].upper()}")
+        request.session.pop("paypal_amount", None)
+        request.session.pop("paypal_invoice_id", None)
+        messages.success(request, f"Demo PayPal payment of {amount} recorded for {invoice.invoice_number}.")
+        return redirect("billing")
+    request.session["paypal_order_id"] = order_id
+    return redirect(approve_url)
+
+
+@require_http_methods(["GET"])
+def paypal_return(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("paypal_invoice_id"))
+    amount = Decimal(request.session.get("paypal_amount", "0"))
+    order_id = request.session.get("paypal_order_id", "") or request.GET.get("token", "")
+    success, reference = paypal.capture_order(order_id)
+    request.session.pop("paypal_amount", None)
+    request.session.pop("paypal_invoice_id", None)
+    request.session.pop("paypal_order_id", None)
+    if success:
+        _record_payment(invoice, amount, "paypal", f"PP-{reference}")
+        messages.success(request, f"PayPal payment of {amount} captured for {invoice.invoice_number}.")
+    else:
+        messages.error(request, "PayPal payment could not be completed.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def paypal_cancel(request):
+    request.session.pop("paypal_amount", None)
+    request.session.pop("paypal_invoice_id", None)
+    request.session.pop("paypal_order_id", None)
+    messages.error(request, "PayPal payment was cancelled.")
     return redirect("billing")
 
 
