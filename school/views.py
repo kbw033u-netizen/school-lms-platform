@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from . import paypal, zoom
+from . import paypal, stripe_card, zoom
 from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
 
 
@@ -118,6 +118,11 @@ def pay_invoice(request, invoice_id):
         request.session["paypal_amount"] = str(amount)
         request.session["paypal_invoice_id"] = invoice.pk
         return redirect("paypal_start")
+    if method in ("visa", "card"):
+        request.session["card_amount"] = str(amount)
+        request.session["card_invoice_id"] = invoice.pk
+        request.session["card_method"] = method
+        return redirect("card_start")
     _record_payment(invoice, amount, method, f"PAY-{uuid.uuid4().hex[:10].upper()}")
     messages.success(request, f"Payment of KES {amount} recorded for {invoice.invoice_number}.")
     return redirect("billing")
@@ -177,6 +182,63 @@ def paypal_cancel(request):
     request.session.pop("paypal_invoice_id", None)
     request.session.pop("paypal_order_id", None)
     messages.error(request, "PayPal payment was cancelled.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def card_start(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("card_invoice_id"))
+    amount = Decimal(request.session.get("card_amount", "0"))
+    method = request.session.get("card_method", "card")
+    if amount <= 0:
+        messages.error(request, "No card payment is in progress.")
+        return redirect("billing")
+    session_id, checkout_url = stripe_card.create_checkout_session(
+        amount,
+        "USD",
+        request.build_absolute_uri("/billing/card/return"),
+        request.build_absolute_uri("/billing/card/cancel"),
+        invoice.invoice_number,
+    )
+    if not checkout_url:
+        # Stripe not configured: record a local demo card payment instead.
+        _record_payment(invoice, amount, method, stripe_card.demo_reference())
+        for key in ("card_amount", "card_invoice_id", "card_method"):
+            request.session.pop(key, None)
+        messages.success(request, f"Demo card payment of {amount} recorded for {invoice.invoice_number}.")
+        return redirect("billing")
+    request.session["card_session_id"] = session_id
+    return redirect(checkout_url)
+
+
+@require_http_methods(["GET"])
+def card_return(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    invoice = get_object_or_404(Invoice, pk=request.session.get("card_invoice_id"))
+    amount = Decimal(request.session.get("card_amount", "0"))
+    method = request.session.get("card_method", "card")
+    session_id = request.session.get("card_session_id", "")
+    paid, reference = stripe_card.retrieve_session(session_id)
+    for key in ("card_amount", "card_invoice_id", "card_method", "card_session_id"):
+        request.session.pop(key, None)
+    if paid:
+        _record_payment(invoice, amount, method, f"CARD-{reference}")
+        messages.success(request, f"Card payment of {amount} completed for {invoice.invoice_number}.")
+    else:
+        messages.error(request, "Card payment could not be completed.")
+    return redirect("billing")
+
+
+@require_http_methods(["GET"])
+def card_cancel(request):
+    for key in ("card_amount", "card_invoice_id", "card_method", "card_session_id"):
+        request.session.pop(key, None)
+    messages.error(request, "Card payment was cancelled.")
     return redirect("billing")
 
 

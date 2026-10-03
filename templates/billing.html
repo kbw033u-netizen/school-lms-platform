@@ -8,7 +8,7 @@
     {% for invoice in invoices %}<tr><td>{{ invoice.student_name }}</td><td>{{ invoice.invoice_number }}</td><td>{{ invoice.term }}</td><td>KES {{ invoice.total_amount|floatformat:2 }}</td><td>KES {{ invoice.amount_paid|floatformat:2 }}</td><td><span class="tag {% if invoice.status == 'Pending' %}warning{% else %}success{% endif %}">{{ invoice.status }}</span></td><td>
       {% if invoice.status != 'Paid' %}<form method="post" action="{% url 'pay_invoice' invoice.id %}" class="pay-form">{% csrf_token %}
         <input type="number" name="amount" min="1" step="0.01" max="{{ invoice.total_amount|add:0 }}" placeholder="Amount" required />
-        <select name="method"><option value="mpesa">M-Pesa</option><option value="paypal">PayPal</option><option value="visa">Visa</option><option value="card">Card</option><option value="bank">Bank</option></select>
+        <select name="method"><option value="mpesa">M-Pesa</option><option value="paypal">PayPal</option><option value="visa">Visa</option><option value="card">Card (Mastercard / Amex / other)</option><option value="bank">Bank</option></select>
         <button type="submit" class="btn btn-primary">Pay now</button>
       </form>{% if invoice.status != 'Paid' %}<small class="pay-hint">PayPal opens a secure checkout.</small>{% endif %}
       </form>{% else %}Settled{% endif %}
