@@ -1,9 +1,12 @@
 import uuid
+from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.db.models import Q
+from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from . import mpesa, paypal, stripe_card, zoom
@@ -65,8 +68,62 @@ def dashboard(request):
     return render(request, "dashboard.html", context)
 
 
+@require_http_methods(["GET", "POST"])
+def staff_room(request):
+    user = _current_user(request)
+    if not user or user.role not in ("teacher", "admin"):
+        return redirect("login")
+
+    if request.method == "POST":
+        upload = request.FILES.get("material_file")
+        allowed_extensions = {
+            ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx",
+            ".mp4", ".mp3", ".jpg", ".jpeg", ".png",
+        }
+        extension = "." + upload.name.rsplit(".", 1)[-1].lower() if upload and "." in upload.name else ""
+        required_fields = ("title", "subject", "grade_level", "resource_type", "term", "academic_year")
+        if not upload or extension not in allowed_extensions:
+            messages.error(request, "Choose a supported PDF, Office, audio, video, or image file.")
+            return redirect("staff_room")
+        if any(not request.POST.get(field, "").strip() for field in required_fields):
+            messages.error(request, "Complete all material details before uploading.")
+            return redirect("staff_room")
+
+        stored_path = default_storage.save(f"library/{upload.name}", upload)
+        ResourceMaterial.objects.create(
+            title=request.POST["title"].strip(),
+            subject=request.POST["subject"].strip(),
+            grade_level=request.POST["grade_level"].strip(),
+            resource_type=request.POST["resource_type"].strip(),
+            term=request.POST["term"].strip(),
+            academic_year=request.POST["academic_year"].strip(),
+            file_url=default_storage.url(stored_path),
+            uploaded_by=f"{user.first_name} {user.last_name}".strip() or user.email,
+        )
+        messages.success(request, "Material uploaded to the digital library.")
+        return redirect("staff_room")
+
+    return render(
+        request,
+        "staff_room.html",
+        {
+            "user": user,
+            "resources": ResourceMaterial.objects.order_by("-id")[:8],
+            "total_resources": ResourceMaterial.objects.count(),
+        },
+    )
+
+
 def library(request):
-    return render(request, "library.html", {"resources": ResourceMaterial.objects.order_by("-id")})
+    user = _current_user(request)
+    return render(
+        request,
+        "library.html",
+        {
+            "resources": ResourceMaterial.objects.order_by("-id"),
+            "is_staff": bool(user and user.role in ("teacher", "admin")),
+        },
+    )
 
 
 def billing(request):
@@ -309,9 +366,55 @@ def card_cancel(request):
     return redirect("billing")
 
 
+@require_http_methods(["GET", "POST"])
 def classes_page(request):
     user = _current_user(request)
     is_staff = bool(user and user.role in ("teacher", "admin"))
+    if request.method == "POST":
+        if not is_staff:
+            return redirect("login")
+        title = request.POST.get("title", "").strip()
+        subject = request.POST.get("subject", "").strip()
+        start_value = request.POST.get("start_at", "").strip()
+        try:
+            scheduled_start = datetime.fromisoformat(start_value)
+            if scheduled_start.tzinfo is None:
+                scheduled_start = timezone.make_aware(scheduled_start, timezone.get_current_timezone())
+        except ValueError:
+            scheduled_start = None
+
+        if not title or not subject or not scheduled_start:
+            messages.error(request, "Enter a lesson title, subject, date, and start time.")
+            return redirect("classes")
+        if scheduled_start <= timezone.now():
+            messages.error(request, "Choose a future date and time for the lesson.")
+            return redirect("classes")
+
+        end_time = scheduled_start + timezone.timedelta(hours=1)
+        zoom_start = scheduled_start.astimezone(datetime_timezone.utc).isoformat().replace("+00:00", "Z")
+        try:
+            meeting = zoom.create_meeting(title, zoom_start, duration_minutes=60)
+        except Exception:
+            messages.error(request, "Zoom could not create the lesson. Check the Zoom connection and try again.")
+            return redirect("classes")
+
+        SchoolClass.objects.create(
+            title=title,
+            teacher_name=f"{user.first_name} {user.last_name}".strip() or user.email,
+            subject=subject,
+            lesson_date=scheduled_start.date(),
+            start_time=scheduled_start.strftime("%I:%M %p"),
+            end_time=end_time.strftime("%I:%M %p"),
+            room_name=f"zoom-{meeting['meeting_id']}",
+            meeting_url=meeting["join_url"],
+            zoom_meeting_id=meeting["meeting_id"],
+            zoom_passcode=meeting["passcode"],
+            zoom_start_url=meeting["start_url"],
+            recurrence="One-off",
+        )
+        messages.success(request, "One-hour Zoom lesson scheduled successfully.")
+        return redirect("classes")
+
     return render(
         request,
         "classes.html",
@@ -325,11 +428,20 @@ def class_go_live(request, class_id):
     if not user or user.role not in ("teacher", "admin"):
         return redirect("login")
     school_class = get_object_or_404(SchoolClass, pk=class_id)
-    meeting = zoom.create_meeting(school_class.title, school_class.start_time)
-    school_class.meeting_url = meeting["join_url"]
-    school_class.zoom_start_url = meeting["start_url"]
-    school_class.zoom_meeting_id = meeting["meeting_id"]
-    school_class.zoom_passcode = meeting["passcode"]
+    if not school_class.zoom_meeting_id:
+        start_time = school_class.start_time
+        if school_class.lesson_date:
+            lesson_time = datetime.strptime(school_class.start_time, "%I:%M %p").time()
+            scheduled_start = timezone.make_aware(
+                datetime.combine(school_class.lesson_date, lesson_time),
+                timezone.get_current_timezone(),
+            )
+            start_time = scheduled_start.astimezone(datetime_timezone.utc).isoformat().replace("+00:00", "Z")
+        meeting = zoom.create_meeting(school_class.title, start_time, duration_minutes=60)
+        school_class.meeting_url = meeting["join_url"]
+        school_class.zoom_start_url = meeting["start_url"]
+        school_class.zoom_meeting_id = meeting["meeting_id"]
+        school_class.zoom_passcode = meeting["passcode"]
     school_class.status = "Live"
     school_class.save(
         update_fields=["meeting_url", "zoom_start_url", "zoom_meeting_id", "zoom_passcode", "status"]

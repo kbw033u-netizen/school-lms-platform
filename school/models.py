@@ -48,6 +48,7 @@ class SchoolClass(models.Model):
     title = models.CharField(max_length=200)
     teacher_name = models.CharField(max_length=150)
     subject = models.CharField(max_length=100)
+    lesson_date = models.DateField(blank=True, null=True)
     start_time = models.CharField(max_length=30)
     end_time = models.CharField(max_length=30)
     room_name = models.CharField(max_length=100)

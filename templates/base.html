@@ -18,7 +18,9 @@
           <a href="/">Home</a><a href="/library">Library</a><a href="/exams">Exams</a><a href="/classes">Classes</a>
           <a href="/billing">Billing</a><a href="/support">Support</a>
           {% if request.session.user_id %}
-            <a href="/dashboard">Dashboard</a><a href="/logout" class="btn btn-light">Logout</a>
+            <a href="/dashboard">Dashboard</a>
+            {% if request.session.role == 'teacher' or request.session.role == 'admin' %}<a href="/staff-room">Staff room</a>{% endif %}
+            <a href="/logout" class="btn btn-light">Logout</a>
           {% else %}
             <a href="/login/teacher" class="btn btn-light">Teacher login</a><a href="/login" class="btn btn-primary">Login</a>
           {% endif %}

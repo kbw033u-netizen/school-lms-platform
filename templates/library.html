@@ -4,6 +4,7 @@
 {% block content %}
 <section class="page-section"><div class="container">
   <div class="section-heading left"><span class="eyebrow">Learning resources</span><h2>Digital library</h2></div>
+  {% if is_staff %}<p class="library-upload-link"><a class="btn btn-primary" href="{% url 'staff_room' %}">Upload learning material</a></p>{% endif %}
   <div class="feature-grid">{% for resource in resources %}<article class="feature-card"><span class="tag success">{{ resource.resource_type }}</span><h3>{{ resource.title }}</h3><p>{{ resource.subject }} / {{ resource.grade_level }}</p><p>{{ resource.term }} / {{ resource.academic_year }}</p>
     {% if resource.resource_type|lower == 'video' %}
       <div class="lesson-player" data-video-player>

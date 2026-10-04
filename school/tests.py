@@ -1,8 +1,11 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
+from datetime import datetime
+from django.utils import timezone
 
-from .models import Exam, Invoice, Payment, ResourceMaterial, SupportTicket, User
+from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
 
 
 class PortalTests(TestCase):
@@ -70,6 +73,101 @@ class PortalTests(TestCase):
         self.assertContains(response, "data-zoom-in")
         self.assertContains(response, "data-zoom-out")
         self.assertContains(response, "data-zoom-reset")
+
+    def test_staff_room_restricts_access_and_uploads_library_material(self):
+        response = self.client.get(reverse("staff_room"))
+        self.assertRedirects(response, reverse("login"))
+
+        self.client.post(
+            reverse("login"),
+            {"email": "student@example.com", "password": "student-pass"},
+        )
+        response = self.client.get(reverse("staff_room"))
+        self.assertRedirects(response, reverse("login"))
+        self.client.get(reverse("logout"))
+
+        teacher = User(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        teacher.set_password("teacher-pass")
+        teacher.save()
+        self.client.post(
+            reverse("login"),
+            {"email": "teacher@example.com", "password": "teacher-pass"},
+        )
+        self.assertEqual(self.client.get(reverse("staff_room")).status_code, 200)
+
+        with patch("school.views.default_storage.save", return_value="library/lesson.pdf"):
+            response = self.client.post(
+                reverse("staff_room"),
+                {
+                    "title": "Fractions lesson",
+                    "subject": "Mathematics",
+                    "grade_level": "Grade 5",
+                    "resource_type": "PDF",
+                    "term": "Term 1",
+                    "academic_year": "2026",
+                    "material_file": SimpleUploadedFile("lesson.pdf", b"%PDF demo", content_type="application/pdf"),
+                },
+            )
+
+        self.assertRedirects(response, reverse("staff_room"))
+        material = ResourceMaterial.objects.get(title="Fractions lesson")
+        self.assertEqual(material.file_url, "/media/library/lesson.pdf")
+        self.assertEqual(material.uploaded_by, "John Mwangi")
+        self.assertContains(self.client.get(reverse("library")), "Fractions lesson")
+
+    def test_teacher_can_schedule_one_hour_zoom_lesson(self):
+        response = self.client.post(
+            reverse("classes"),
+            {"title": "Science", "subject": "Biology", "start_at": "2030-05-10T09:00"},
+        )
+        self.assertRedirects(response, reverse("login"))
+        self.assertEqual(SchoolClass.objects.count(), 0)
+
+        teacher = User(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        teacher.set_password("teacher-pass")
+        teacher.save()
+        self.client.post(
+            reverse("login"),
+            {"email": "teacher@example.com", "password": "teacher-pass"},
+        )
+        start_at = timezone.make_aware(datetime(2030, 5, 10, 9, 0), timezone.get_current_timezone())
+        fake_meeting = {
+            "join_url": "https://zoom.us/j/123",
+            "start_url": "https://zoom.us/s/123",
+            "meeting_id": "123",
+            "passcode": "456",
+        }
+        with patch("school.views.zoom.create_meeting", return_value=fake_meeting) as create_meeting:
+            response = self.client.post(
+                reverse("classes"),
+                {"title": "Science", "subject": "Biology", "start_at": "2030-05-10T09:00"},
+            )
+
+        self.assertRedirects(response, reverse("classes"))
+        self.assertEqual(create_meeting.call_args.args[0], "Science")
+        self.assertEqual(create_meeting.call_args.args[1][-1], "Z")
+        self.assertEqual(create_meeting.call_args.kwargs["duration_minutes"], 60)
+        lesson = SchoolClass.objects.get(title="Science")
+        self.assertEqual(lesson.end_time, "10:00 AM")
+        self.assertEqual(lesson.lesson_date.isoformat(), "2030-05-10")
+        self.assertEqual(lesson.zoom_meeting_id, "123")
+
+        with patch("school.views.zoom.create_meeting") as create_again:
+            response = self.client.post(reverse("class_go_live", args=[lesson.pk]))
+        self.assertRedirects(response, reverse("classes"))
+        create_again.assert_not_called()
+        lesson.refresh_from_db()
+        self.assertEqual(lesson.status, "Live")
 
     def test_invoice_payment_updates_status(self):
         invoice = Invoice.objects.create(

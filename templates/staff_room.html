@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Room | Wazito Schools{% endblock %}
+{% block content %}
+<section class="page-section"><div class="container">
+  <div class="section-heading left"><span class="eyebrow">Teacher and admin workspace</span><h2>Staff room</h2><p>Upload teaching materials and keep the digital library current.</p></div>
+  <div class="staff-room-grid">
+    <section class="panel staff-upload-panel" aria-labelledby="upload-heading">
+      <h3 id="upload-heading">Add library material</h3>
+      <form method="post" enctype="multipart/form-data" class="staff-upload-form">{% csrf_token %}
+        <label>Material title<input type="text" name="title" maxlength="200" required /></label>
+        <label>Subject<input type="text" name="subject" maxlength="100" required /></label>
+        <label>Grade or form<input type="text" name="grade_level" maxlength="50" required /></label>
+        <label>Resource type<input type="text" name="resource_type" placeholder="PDF, Video, Workbook" maxlength="50" required /></label>
+        <label>Term<input type="text" name="term" maxlength="50" required /></label>
+        <label>Academic year<input type="text" name="academic_year" maxlength="10" required /></label>
+        <label>File<input type="file" name="material_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.mp3,.jpg,.jpeg,.png" required /></label>
+        <button type="submit" class="btn btn-primary">Upload to library</button>
+      </form>
+    </section>
+    <section class="staff-library-panel" aria-labelledby="recent-materials-heading">
+      <div class="staff-list-heading"><div><span class="eyebrow">{{ total_resources }} total</span><h3 id="recent-materials-heading">Recent library materials</h3></div><a href="{% url 'library' %}">Open library</a></div>
+      <ul class="list staff-resource-list">
+        {% for resource in resources %}
+          <li><strong>{{ resource.title }}</strong><span>{{ resource.subject }} / {{ resource.grade_level }} · {{ resource.resource_type }}</span><span>Added by {{ resource.uploaded_by }}</span></li>
+        {% empty %}
+          <li>No materials have been uploaded yet.</li>
+        {% endfor %}
+      </ul>
+      <p class="staff-shortcuts"><a href="{% url 'exams' %}">Manage exam papers</a><a href="{% url 'classes' %}">View classes</a></p>
+    </section>
+  </div>
+</div></section>
+{% endblock %}
