@@ -3,8 +3,10 @@ from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.core.exceptions import SuspiciousFileOperation
 from django.db.models import Q
 from django.core.files.storage import default_storage
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
@@ -124,6 +126,17 @@ def library(request):
             "is_staff": bool(user and user.role in ("teacher", "admin")),
         },
     )
+
+
+@require_http_methods(["GET", "HEAD"])
+def serve_media(request, file_path):
+    try:
+        uploaded_file = default_storage.open(file_path, "rb")
+    except (FileNotFoundError, SuspiciousFileOperation):
+        raise Http404
+    response = FileResponse(uploaded_file)
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def billing(request):

@@ -36,6 +36,12 @@ The default SQLite database and secret key are for local development only. Set a
 
 Run the checks with `python manage.py check` and `python manage.py test`.
 
+## Deploy on Render
+
+The Render Blueprint in `render.yaml` creates a paid web service, PostgreSQL database, and persistent disk for uploads. Review the current Render pricing before creating the resources. Connect the GitHub repository at <https://render.com/deploy?repo=https://github.com/kbw033u-netizen/school-lms-platform> and apply the Blueprint. It generates a Django secret, runs migrations, serves static files through WhiteNoise, and keeps uploaded files on the persistent disk. Demo users are not seeded in production.
+
+After the first deploy, open the service Shell and run `python manage.py create_portal_admin` to create the initial administrator with a private password. Then sign in and create teacher accounts before sharing the site. Configure Zoom and payment credentials in the Render service environment if those integrations should use live providers.
+
 ## Live Zoom classes
 
 Teachers and admins can start a live Zoom lesson from the Classes page. Set `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, and `ZOOM_CLIENT_SECRET` (Zoom Server-to-Server OAuth app) to create real meetings; without them, demo join links are generated.

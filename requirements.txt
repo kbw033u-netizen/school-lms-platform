@@ -1,3 +1,7 @@
 Django>=6.0,<7.0
 tornado>=6.5,<7.0
 honcho
+dj-database-url>=2.3,<3.0
+gunicorn>=23,<24
+psycopg[binary]>=3.2,<4
+whitenoise>=6.8,<7

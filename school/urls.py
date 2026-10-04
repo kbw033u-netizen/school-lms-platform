@@ -5,6 +5,7 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("media/<path:file_path>", views.serve_media, name="serve_media"),
     path("login", views.login_view, name="login"),
     path("login/teacher", views.login_view, name="teacher_login"),
     path("logout", views.logout_view, name="logout"),

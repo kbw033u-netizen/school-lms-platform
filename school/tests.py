@@ -1,3 +1,4 @@
+from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -73,6 +74,14 @@ class PortalTests(TestCase):
         self.assertContains(response, "data-zoom-in")
         self.assertContains(response, "data-zoom-out")
         self.assertContains(response, "data-zoom-reset")
+
+    def test_uploaded_media_is_served_from_storage(self):
+        with patch("school.views.default_storage.open", return_value=BytesIO(b"sample material")):
+            response = self.client.get("/media/library/sample.pdf")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), b"sample material")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
 
     def test_staff_room_restricts_access_and_uploads_library_material(self):
         response = self.client.get(reverse("staff_room"))
