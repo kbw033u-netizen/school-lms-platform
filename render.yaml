@@ -6,7 +6,7 @@ services:
     region: oregon
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate --noinput
-    startCommand: gunicorn config.wsgi:application --workers 2 --threads 4 --timeout 120
+    startCommand: python -m config.tornado_server
     disk:
       name: school-lms-uploads
       mountPath: /var/data
@@ -32,6 +32,8 @@ services:
           property: connectionString
       - key: SCHOOL_MEDIA_ROOT
         value: /var/data/media
+      - key: HOST
+        value: 0.0.0.0
 
 databases:
   - name: school-lms-db

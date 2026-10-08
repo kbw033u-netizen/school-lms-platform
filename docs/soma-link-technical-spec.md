@@ -28,7 +28,7 @@ Soma Link connects curriculum-aligned learning, teacher-led assessment, learner 
 5. **Data:** PostgreSQL as the system of record, with PostGIS for mapwork geometry and spatial questions. Redis is ephemeral coordination/cache/presence only, not the only copy of scores, payments, or contest submissions.
 6. **Media:** Store original video and documents in S3-compatible object storage or Cloudinary. Use a managed video pipeline (for example, Cloudinary, Mux, or Cloudflare Stream) to transcode to adaptive HLS/DASH, deliver through a CDN, and issue short-lived signed playback URLs. Do not proxy video bytes through Django.
 7. **Payments:** A provider adapter layer for Safaricom Daraja STK Push, Paystack, Flutterwave, and school vouchers. Persist every request, callback, state transition, and reconciliation result in an append-only audit trail.
-8. **Operations:** Containerized web, worker, scheduler, Redis, and database services; centralized logs, error reporting, metrics, traces, backups, and alerting. Honcho may orchestrate local processes; it is not a production process supervisor.
+8. **Operations:** Containerized web, worker, scheduler, Redis, and database services; centralized logs, error reporting, metrics, traces, backups, and alerting. Use the deployment platform for process supervision; run the local demo HTTP service with the Tornado entrypoint.
 
 ### Async ORM and WSGI safety
 
