@@ -22,7 +22,7 @@
             {% if request.session.role == 'teacher' or request.session.role == 'admin' %}<a href="/staff-room">Staff room</a>{% endif %}
             <a href="/logout" class="btn btn-light">Logout</a>
           {% else %}
-            <a href="/login/teacher" class="btn btn-light">Teacher login</a><a href="/login" class="btn btn-primary">Login</a>
+            <a href="/login/teacher" class="btn btn-light">Teacher login</a><a href="/login" class="btn btn-light">Login</a><a href="/create-account" class="btn btn-primary">Create account</a>
           {% endif %}
         </nav>
       </div>

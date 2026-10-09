@@ -21,6 +21,12 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS.extend(
+        origin
+        for origin in ("https://localhost:8000", "https://127.0.0.1:8000")
+        if origin not in CSRF_TRUSTED_ORIGINS
+    )
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 

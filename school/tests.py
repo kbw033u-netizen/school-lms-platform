@@ -2,12 +2,14 @@ from io import BytesIO
 import json
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test import Client, override_settings
 from django.urls import reverse
 from unittest.mock import patch
 from datetime import datetime
 from django.utils import timezone
 
 from . import whatsapp
+from . import google_meet
 from .models import (
     Exam,
     Invoice,
@@ -33,7 +35,7 @@ class PortalTests(TestCase):
         cls.user.save()
 
     def test_public_pages_render(self):
-        for page in ("index", "library", "classes", "exams", "support", "contact"):
+        for page in ("index", "library", "classes", "exams", "support", "contact", "create_account"):
             with self.subTest(page=page):
                 self.assertEqual(self.client.get(reverse(page)).status_code, 200)
 
@@ -132,6 +134,16 @@ class PortalTests(TestCase):
         ):
             whatsapp.send_group_message("Practical invite")
 
+    @patch.dict("os.environ", {}, clear=True)
+    def test_google_meet_reports_required_and_optional_configuration(self):
+        self.assertFalse(google_meet.is_configured())
+        with self.assertRaisesMessage(
+            google_meet.GoogleMeetError,
+            "Set GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_CALENDAR_DELEGATE_EMAIL. "
+            "GOOGLE_CALENDAR_ID is optional and defaults to primary.",
+        ):
+            google_meet._configuration()
+
     def test_parent_cannot_open_student_practical_lab(self):
         parent = User(
             email="parent@example.com",
@@ -221,6 +233,86 @@ class PortalTests(TestCase):
         self.client.get(reverse("logout"))
         self.assertRedirects(self.client.get(reverse("dashboard")), reverse("login"))
 
+    def test_invalid_login_shows_error_without_unauthorized_response(self):
+        response = self.client.post(
+            reverse("login"),
+            {"email": "student@example.com", "password": "incorrect-password"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invalid email or password.")
+        self.assertNotIn("user_id", self.client.session)
+
+    def test_student_can_create_account_and_is_signed_in(self):
+        response = self.client.post(
+            reverse("create_account"),
+            {
+                "first_name": "Kendi",
+                "last_name": "Wanjiku",
+                "email": "Kendi@example.com",
+                "password": "new-student-pass",
+                "confirm_password": "new-student-pass",
+            },
+        )
+
+        account = User.objects.get(email="kendi@example.com")
+        self.assertEqual(account.role, "student")
+        self.assertTrue(account.check_password("new-student-pass"))
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 200)
+
+    def test_create_account_rejects_invalid_and_duplicate_submissions(self):
+        cases = (
+            {
+                "first_name": "New",
+                "last_name": "Student",
+                "email": "new@example.com",
+                "password": "short",
+                "confirm_password": "short",
+            },
+            {
+                "first_name": "New",
+                "last_name": "Student",
+                "email": "new@example.com",
+                "password": "long-enough-pass",
+                "confirm_password": "different-pass",
+            },
+            {
+                "first_name": "Existing",
+                "last_name": "Student",
+                "email": "STUDENT@example.com",
+                "password": "long-enough-pass",
+                "confirm_password": "long-enough-pass",
+            },
+        )
+        for data in cases:
+            with self.subTest(email=data["email"], password=data["password"]):
+                response = self.client.post(reverse("create_account"), data)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(User.objects.count(), 1)
+
+    @override_settings(CSRF_TRUSTED_ORIGINS=["https://localhost:8000"])
+    def test_create_account_accepts_csrf_from_forwarded_local_https_origin(self):
+        client = Client(enforce_csrf_checks=True)
+        form_response = client.get("https://localhost:8000/create-account")
+        csrf_token = form_response.cookies["csrftoken"].value
+
+        response = client.post(
+            "https://localhost:8000/create-account",
+            {
+                "first_name": "Kendi",
+                "last_name": "Wanjiku",
+                "email": "kendi@example.com",
+                "password": "new-student-pass",
+                "confirm_password": "new-student-pass",
+                "csrfmiddlewaretoken": csrf_token,
+            },
+            HTTP_ORIGIN="https://localhost:8000",
+            HTTP_REFERER="https://localhost:8000/create-account",
+        )
+
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
+
     def test_support_ticket_submission(self):
         response = self.client.post(
             reverse("support"),
@@ -308,7 +400,7 @@ class PortalTests(TestCase):
         self.assertEqual(material.uploaded_by, "John Mwangi")
         self.assertContains(self.client.get(reverse("library")), "Fractions lesson")
 
-    def test_teacher_can_schedule_one_hour_zoom_lesson(self):
+    def test_teacher_can_schedule_one_hour_google_meet_lesson(self):
         response = self.client.post(
             reverse("classes"),
             {"title": "Science", "subject": "Biology", "start_at": "2030-05-10T09:00"},
@@ -330,12 +422,10 @@ class PortalTests(TestCase):
         )
         start_at = timezone.make_aware(datetime(2030, 5, 10, 9, 0), timezone.get_current_timezone())
         fake_meeting = {
-            "join_url": "https://zoom.us/j/123",
-            "start_url": "https://zoom.us/s/123",
-            "meeting_id": "123",
-            "passcode": "456",
+            "join_url": "https://meet.google.com/abc-defg-hij",
+            "event_id": "calendar-event-123",
         }
-        with patch("school.views.zoom.create_meeting", return_value=fake_meeting) as create_meeting:
+        with patch("school.views.google_meet.create_meeting", return_value=fake_meeting) as create_meeting:
             response = self.client.post(
                 reverse("classes"),
                 {"title": "Science", "subject": "Biology", "start_at": "2030-05-10T09:00"},
@@ -343,19 +433,90 @@ class PortalTests(TestCase):
 
         self.assertRedirects(response, reverse("classes"))
         self.assertEqual(create_meeting.call_args.args[0], "Science")
-        self.assertEqual(create_meeting.call_args.args[1][-1], "Z")
-        self.assertEqual(create_meeting.call_args.kwargs["duration_minutes"], 60)
+        self.assertEqual(create_meeting.call_args.args[1], start_at.isoformat())
+        self.assertIn("T10:00:00", create_meeting.call_args.args[2])
+        self.assertEqual(create_meeting.call_args.args[4], "teacher@example.com")
         lesson = SchoolClass.objects.get(title="Science")
         self.assertEqual(lesson.end_time, "10:00 AM")
         self.assertEqual(lesson.lesson_date.isoformat(), "2030-05-10")
-        self.assertEqual(lesson.zoom_meeting_id, "123")
+        self.assertEqual(lesson.google_calendar_event_id, "calendar-event-123")
 
-        with patch("school.views.zoom.create_meeting") as create_again:
+        with patch("school.views.google_meet.create_meeting") as create_again:
             response = self.client.post(reverse("class_go_live", args=[lesson.pk]))
         self.assertRedirects(response, reverse("classes"))
         create_again.assert_not_called()
         lesson.refresh_from_db()
         self.assertEqual(lesson.status, "Live")
+
+    @patch("school.views.google_meet.create_meeting", side_effect=google_meet.GoogleMeetError("Google Meet is not configured."))
+    def test_google_meet_schedule_failure_is_reported_without_creating_a_class(self, _create_meeting):
+        teacher = User.objects.create(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.pk
+        session.save()
+
+        response = self.client.post(
+            reverse("classes"),
+            {"title": "Science", "subject": "Biology", "start_at": "2030-05-10T09:00"},
+        )
+
+        self.assertRedirects(response, reverse("classes"), fetch_redirect_response=False)
+        self.assertEqual(SchoolClass.objects.count(), 0)
+        response = self.client.get(reverse("classes"))
+        self.assertContains(response, "Google Meet is not configured.")
+
+    @patch("school.views.google_meet.is_configured", return_value=False)
+    def test_staff_are_told_when_google_meet_is_not_configured(self, _is_configured):
+        teacher = User.objects.create(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.pk
+        session.save()
+
+        response = self.client.get(reverse("classes"))
+
+        self.assertContains(response, "Google Meet not configured")
+
+    @patch("school.google_meet._configuration", return_value=("access-token", "primary"))
+    @patch("school.google_meet.urllib.request.urlopen")
+    @patch("school.google_meet.json.load", return_value={
+        "id": "calendar-event-id",
+        "hangoutLink": "https://meet.google.com/abc-defg-hij",
+    })
+    def test_google_meet_creates_calendar_event_with_video_conference(
+        self, _json_load, urlopen, _configuration
+    ):
+        meeting = google_meet.create_meeting(
+            "Science",
+            "2030-05-10T09:00:00+03:00",
+            "2030-05-10T10:00:00+03:00",
+            "Africa/Nairobi",
+            "teacher@example.com",
+        )
+
+        self.assertEqual(
+            meeting,
+            {
+                "join_url": "https://meet.google.com/abc-defg-hij",
+                "event_id": "calendar-event-id",
+            },
+        )
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(request.method, "POST")
+        self.assertIn("conferenceDataVersion=1", request.full_url)
+        self.assertEqual(payload["conferenceData"]["createRequest"]["conferenceSolutionKey"]["type"], "hangoutsMeet")
+        self.assertEqual(payload["start"]["timeZone"], "Africa/Nairobi")
+        self.assertEqual(payload["attendees"], [{"email": "teacher@example.com"}])
 
     def test_invoice_payment_updates_status(self):
         invoice = Invoice.objects.create(

@@ -9,6 +9,7 @@ urlpatterns = [
     path("media/<path:file_path>", views.serve_media, name="serve_media"),
     path("login", views.login_view, name="login"),
     path("login/teacher", views.login_view, name="teacher_login"),
+    path("create-account", views.create_account, name="create_account"),
     path("logout", views.logout_view, name="logout"),
     path("dashboard", views.dashboard, name="dashboard"),
     path("staff-room", views.staff_room, name="staff_room"),

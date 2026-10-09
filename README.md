@@ -5,14 +5,15 @@ A Django-powered school portal demo for school administrators, teachers, student
 ## Features
 
 - Role-based sign-in and dashboards for admins, teachers, students, and parents.
-- Class schedules and live lessons. Zoom Server-to-Server OAuth credentials enable real Zoom meetings; without them, the app creates demo join links.
+- Public student account creation with server-side password hashing; staff accounts remain staff-managed.
+- Scheduled live lessons with Google Meet conferences created through Google Calendar.
 - A school library for learning materials and an exams area for PDF uploads.
 - An interactive KCSE-style Physics practical lab for investigating a resistor's current-voltage relationship. It is a revision simulation, not an official KNEC examination paper.
 - A date-based practical attendance register where teachers and admins record and review which students were present or absent.
 - Student invoices and payment records, with optional M-Pesa STK Push, PayPal Checkout, and Stripe Checkout integrations.
 - Support tickets and contact forms.
 
-Payment and Zoom integrations run in demo mode when their credentials are not configured. Do not treat locally recorded demo payments or sample accounts as production data.
+Without payment-provider credentials, payment flows record demo payments. Google Meet lesson scheduling requires configured Google Workspace credentials; no fake meeting links are generated. Do not treat locally recorded demo payments or sample accounts as production data.
 
 ## Run locally
 
@@ -67,13 +68,11 @@ Render supplies `DATABASE_URL`, `PORT`, and `RENDER_EXTERNAL_HOSTNAME`. Its Blue
 
 ### Optional integrations
 
-- **Zoom:** Set `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, and `ZOOM_CLIENT_SECRET` for a Zoom Server-to-Server OAuth app.
+- **Google Meet:** Enable the Google Calendar API in a Google Cloud project, create a service account, and configure Workspace domain-wide delegation for `https://www.googleapis.com/auth/calendar.events`. Set `GOOGLE_SERVICE_ACCOUNT_JSON` to the service account key JSON, `GOOGLE_CALENDAR_DELEGATE_EMAIL` to the Workspace user's calendar that will own lessons, and optionally `GOOGLE_CALENDAR_ID` (defaults to `primary`). Keep the service account key secret; enter compact single-line JSON or configure it as a deployment secret. The delegated user must be allowed to create Calendar events with Meet conferences.
 - **M-Pesa:** Set `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, and `MPESA_PASSKEY`. `MPESA_ENV` defaults to `sandbox`; use `production` only with live Daraja credentials. `MPESA_CALLBACK_URL` can override the callback URL.
 - **PayPal:** Set `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. `PAYPAL_ENV` defaults to `sandbox`; use `live` for the live API.
 - **Stripe:** Set `STRIPE_SECRET_KEY` to enable Stripe Checkout. Use a Stripe test key while testing.
 - **WhatsApp Groups API:** Set `WHATSAPP_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, and `WHATSAPP_GROUP_ID` to send practical invitations directly into an API-managed group. Keep the access token in deployment secrets or `.env`; never commit it. Meta Groups API requires an Official Business Account and Cloud API-managed group. It cannot send into ordinary groups created in the WhatsApp app.
-
-Without payment-provider credentials, payment flows record local demo payments instead of contacting the providers.
 
 ## Development commands
 
@@ -89,7 +88,7 @@ To create the first administrator on a deployed instance, run `python manage.py 
 ## Project structure
 
 - `config/` – Django settings, URL configuration, and WSGI application.
-- `school/` – models, views, payment and Zoom integrations, tests, and management commands.
+- `school/` – models, views, Google Meet and payment integrations, tests, and management commands.
 - `templates/` – Django templates for portal pages.
 - `static/` – CSS and browser-side JavaScript collected and served by WhiteNoise.
 - `library/` – bundled library resources.
@@ -99,4 +98,4 @@ To create the first administrator on a deployed instance, run `python manage.py 
 
 The Blueprint in `render.yaml` creates a paid web service, PostgreSQL database, and persistent disk for uploads. Review current Render pricing before applying it. Deploy through <https://render.com/deploy?repo=https://github.com/kbw033u-netizen/school-lms-platform> and apply the Blueprint. The build installs dependencies and collects static files, the pre-deploy step runs migrations, and Gunicorn serves Django on Render's assigned port. Render checks `/healthz`, which verifies that the app can reach its database. Uploaded media is stored on the persistent disk. Demo accounts are not seeded in production.
 
-After the first deploy, open the service Shell and run `python manage.py create_portal_admin`, then sign in and create staff accounts. Add Zoom or payment-provider credentials as Render environment variables if live integrations are required. Exam PDFs are stored under `media/exams/`.
+After the first deploy, open the service Shell and run `python manage.py create_portal_admin`, then sign in and create staff accounts. Add Google Workspace or payment-provider credentials as Render environment variables if live integrations are required. Exam PDFs are stored under `media/exams/`.

@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime, timezone as datetime_timezone
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import SuspiciousFileOperation
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.core.files.storage import default_storage
 from django.db import connection
@@ -14,7 +14,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods, require_POST
 
-from . import mpesa, paypal, stripe_card, whatsapp, zoom
+from . import google_meet, mpesa, paypal, stripe_card, whatsapp
+from .forms import CreateAccountForm
 from .models import (
     Exam,
     Invoice,
@@ -55,8 +56,32 @@ def login_view(request):
             request.session["role"] = user.role
             return redirect("dashboard")
         messages.error(request, "Invalid email or password.")
-        return render(request, "login.html", {"login_role": login_role}, status=401)
+        return render(request, "login.html", {"login_role": login_role})
     return render(request, "login.html", {"login_role": login_role})
+
+
+@require_http_methods(["GET", "POST"])
+def create_account(request):
+    form = CreateAccountForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                user = User(
+                    email=form.cleaned_data["email"],
+                    first_name=form.cleaned_data["first_name"],
+                    last_name=form.cleaned_data["last_name"],
+                    role="student",
+                )
+                user.set_password(form.cleaned_data["password"])
+                user.save()
+        except IntegrityError:
+            form.add_error("email", "An account already exists with this email.")
+        else:
+            request.session.cycle_key()
+            request.session["user_id"] = user.pk
+            request.session["role"] = user.role
+            return redirect("dashboard")
+    return render(request, "create_account.html", {"form": form})
 
 
 def logout_view(request):
@@ -422,11 +447,16 @@ def classes_page(request):
             return redirect("classes")
 
         end_time = scheduled_start + timezone.timedelta(hours=1)
-        zoom_start = scheduled_start.astimezone(datetime_timezone.utc).isoformat().replace("+00:00", "Z")
         try:
-            meeting = zoom.create_meeting(title, zoom_start, duration_minutes=60)
-        except Exception:
-            messages.error(request, "Zoom could not create the lesson. Check the Zoom connection and try again.")
+            meeting = google_meet.create_meeting(
+                title,
+                scheduled_start.isoformat(),
+                end_time.isoformat(),
+                timezone.get_current_timezone_name(),
+                user.email,
+            )
+        except google_meet.GoogleMeetError as error:
+            messages.error(request, str(error))
             return redirect("classes")
 
         SchoolClass.objects.create(
@@ -436,20 +466,22 @@ def classes_page(request):
             lesson_date=scheduled_start.date(),
             start_time=scheduled_start.strftime("%I:%M %p"),
             end_time=end_time.strftime("%I:%M %p"),
-            room_name=f"zoom-{meeting['meeting_id']}",
+            room_name="google-meet",
             meeting_url=meeting["join_url"],
-            zoom_meeting_id=meeting["meeting_id"],
-            zoom_passcode=meeting["passcode"],
-            zoom_start_url=meeting["start_url"],
+            google_calendar_event_id=meeting["event_id"],
             recurrence="One-off",
         )
-        messages.success(request, "One-hour Zoom lesson scheduled successfully.")
+        messages.success(request, "One-hour Google Meet lesson scheduled successfully.")
         return redirect("classes")
 
     return render(
         request,
         "classes.html",
-        {"classes": SchoolClass.objects.order_by("id"), "is_staff": is_staff},
+        {
+            "classes": SchoolClass.objects.order_by("id"),
+            "is_staff": is_staff,
+            "google_meet_configured": google_meet.is_configured(),
+        },
     )
 
 
@@ -459,25 +491,12 @@ def class_go_live(request, class_id):
     if not user or user.role not in ("teacher", "admin"):
         return redirect("login")
     school_class = get_object_or_404(SchoolClass, pk=class_id)
-    if not school_class.zoom_meeting_id:
-        start_time = school_class.start_time
-        if school_class.lesson_date:
-            lesson_time = datetime.strptime(school_class.start_time, "%I:%M %p").time()
-            scheduled_start = timezone.make_aware(
-                datetime.combine(school_class.lesson_date, lesson_time),
-                timezone.get_current_timezone(),
-            )
-            start_time = scheduled_start.astimezone(datetime_timezone.utc).isoformat().replace("+00:00", "Z")
-        meeting = zoom.create_meeting(school_class.title, start_time, duration_minutes=60)
-        school_class.meeting_url = meeting["join_url"]
-        school_class.zoom_start_url = meeting["start_url"]
-        school_class.zoom_meeting_id = meeting["meeting_id"]
-        school_class.zoom_passcode = meeting["passcode"]
+    if not school_class.google_calendar_event_id or "meet.google.com/" not in school_class.meeting_url:
+        messages.error(request, "This lesson has no Google Meet link. Schedule a new Google Meet lesson.")
+        return redirect("classes")
     school_class.status = "Live"
-    school_class.save(
-        update_fields=["meeting_url", "zoom_start_url", "zoom_meeting_id", "zoom_passcode", "status"]
-    )
-    messages.success(request, f"{school_class.title} is now live on Zoom.")
+    school_class.save(update_fields=["status"])
+    messages.success(request, f"{school_class.title} is now live on Google Meet.")
     return redirect("classes")
 
 

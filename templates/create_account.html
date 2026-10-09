@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Student Account | Wazito Schools{% endblock %}
+{% block content %}
+<section class="auth-section">
+  <div class="container auth-wrap">
+    <div class="auth-card">
+      <span class="eyebrow">Join Wazito Schools</span>
+      <h2>Create a student account</h2>
+      <p class="account-note">Student registration is open. Teacher and admin accounts are created by school staff.</p>
+      <form method="post" action="{% url 'create_account' %}">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <label for="{{ form.first_name.id_for_label }}">First name
+          {{ form.first_name }}
+          {% if form.first_name.errors %}<span class="field-error">{{ form.first_name.errors|join:", " }}</span>{% endif %}
+        </label>
+        <label for="{{ form.last_name.id_for_label }}">Last name
+          {{ form.last_name }}
+          {% if form.last_name.errors %}<span class="field-error">{{ form.last_name.errors|join:", " }}</span>{% endif %}
+        </label>
+        <label for="{{ form.email.id_for_label }}">Email
+          {{ form.email }}
+          {% if form.email.errors %}<span class="field-error">{{ form.email.errors|join:", " }}</span>{% endif %}
+        </label>
+        <label for="{{ form.password.id_for_label }}">Password (at least 8 characters)
+          {{ form.password }}
+          {% if form.password.errors %}<span class="field-error">{{ form.password.errors|join:", " }}</span>{% endif %}
+        </label>
+        <label for="{{ form.confirm_password.id_for_label }}">Confirm password
+          {{ form.confirm_password }}
+          {% if form.confirm_password.errors %}<span class="field-error">{{ form.confirm_password.errors|join:", " }}</span>{% endif %}
+        </label>
+        <button type="submit" class="btn btn-primary full">Create student account</button>
+      </form>
+      <p class="auth-switch">Already registered? <a href="{% url 'login' %}">Log in</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

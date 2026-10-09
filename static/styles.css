@@ -481,6 +481,36 @@ h1 {
   font-size: 26px;
 }
 
+.account-note {
+  margin: -10px 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.auth-switch {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.auth-switch a {
+  font-weight: 700;
+}
+
+.field-error,
+.form-errors {
+  color: #a42d2d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.form-errors ul,
+.field-error ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .auth-card h3 {
   font-size: 20px;
 }
