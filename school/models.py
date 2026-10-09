@@ -53,7 +53,7 @@ class SchoolClass(models.Model):
     end_time = models.CharField(max_length=30)
     room_name = models.CharField(max_length=100)
     meeting_url = models.URLField(max_length=500)
-    google_calendar_event_id = models.CharField(max_length=200, blank=True)
+    google_meet_space_name = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=30, default="scheduled")
     recurrence = models.CharField(max_length=50, default="One-off")
 

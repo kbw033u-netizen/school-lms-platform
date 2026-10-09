@@ -135,12 +135,11 @@ class PortalTests(TestCase):
             whatsapp.send_group_message("Practical invite")
 
     @patch.dict("os.environ", {}, clear=True)
-    def test_google_meet_reports_required_and_optional_configuration(self):
+    def test_google_meet_reports_missing_configuration(self):
         self.assertFalse(google_meet.is_configured())
         with self.assertRaisesMessage(
             google_meet.GoogleMeetError,
-            "Set GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_CALENDAR_DELEGATE_EMAIL. "
-            "GOOGLE_CALENDAR_ID is optional and defaults to primary.",
+            "Set GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_MEET_DELEGATE_EMAIL.",
         ):
             google_meet._configuration()
 
@@ -420,10 +419,9 @@ class PortalTests(TestCase):
             reverse("login"),
             {"email": "teacher@example.com", "password": "teacher-pass"},
         )
-        start_at = timezone.make_aware(datetime(2030, 5, 10, 9, 0), timezone.get_current_timezone())
         fake_meeting = {
             "join_url": "https://meet.google.com/abc-defg-hij",
-            "event_id": "calendar-event-123",
+            "space_name": "spaces/space-123",
         }
         with patch("school.views.google_meet.create_meeting", return_value=fake_meeting) as create_meeting:
             response = self.client.post(
@@ -432,14 +430,11 @@ class PortalTests(TestCase):
             )
 
         self.assertRedirects(response, reverse("classes"))
-        self.assertEqual(create_meeting.call_args.args[0], "Science")
-        self.assertEqual(create_meeting.call_args.args[1], start_at.isoformat())
-        self.assertIn("T10:00:00", create_meeting.call_args.args[2])
-        self.assertEqual(create_meeting.call_args.args[4], "teacher@example.com")
+        create_meeting.assert_called_once_with()
         lesson = SchoolClass.objects.get(title="Science")
         self.assertEqual(lesson.end_time, "10:00 AM")
         self.assertEqual(lesson.lesson_date.isoformat(), "2030-05-10")
-        self.assertEqual(lesson.google_calendar_event_id, "calendar-event-123")
+        self.assertEqual(lesson.google_meet_space_name, "spaces/space-123")
 
         with patch("school.views.google_meet.create_meeting") as create_again:
             response = self.client.post(reverse("class_go_live", args=[lesson.pk]))
@@ -486,37 +481,38 @@ class PortalTests(TestCase):
 
         self.assertContains(response, "Google Meet not configured")
 
-    @patch("school.google_meet._configuration", return_value=("access-token", "primary"))
+    @patch("school.google_meet._configuration", return_value="access-token")
     @patch("school.google_meet.urllib.request.urlopen")
     @patch("school.google_meet.json.load", return_value={
-        "id": "calendar-event-id",
-        "hangoutLink": "https://meet.google.com/abc-defg-hij",
+        "name": "spaces/space-123",
+        "meetingUri": "https://meet.google.com/abc-defg-hij",
     })
-    def test_google_meet_creates_calendar_event_with_video_conference(
+    def test_google_meet_api_creates_meeting_space(
         self, _json_load, urlopen, _configuration
     ):
-        meeting = google_meet.create_meeting(
-            "Science",
-            "2030-05-10T09:00:00+03:00",
-            "2030-05-10T10:00:00+03:00",
-            "Africa/Nairobi",
-            "teacher@example.com",
-        )
+        meeting = google_meet.create_meeting()
 
         self.assertEqual(
             meeting,
             {
                 "join_url": "https://meet.google.com/abc-defg-hij",
-                "event_id": "calendar-event-id",
+                "space_name": "spaces/space-123",
             },
         )
         request = urlopen.call_args.args[0]
         payload = json.loads(request.data)
         self.assertEqual(request.method, "POST")
-        self.assertIn("conferenceDataVersion=1", request.full_url)
-        self.assertEqual(payload["conferenceData"]["createRequest"]["conferenceSolutionKey"]["type"], "hangoutsMeet")
-        self.assertEqual(payload["start"]["timeZone"], "Africa/Nairobi")
-        self.assertEqual(payload["attendees"], [{"email": "teacher@example.com"}])
+        self.assertEqual(request.full_url, "https://meet.googleapis.com/v2/spaces")
+        self.assertEqual(payload, {})
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_google_meet_api_reports_missing_configuration(self):
+        self.assertFalse(google_meet.is_configured())
+        with self.assertRaisesMessage(
+            google_meet.GoogleMeetError,
+            "Set GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_MEET_DELEGATE_EMAIL.",
+        ):
+            google_meet._configuration()
 
     def test_invoice_payment_updates_status(self):
         invoice = Invoice.objects.create(

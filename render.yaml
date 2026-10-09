@@ -35,10 +35,8 @@ services:
         value: /var/data/media
       - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false
-      - key: GOOGLE_CALENDAR_DELEGATE_EMAIL
+      - key: GOOGLE_MEET_DELEGATE_EMAIL
         sync: false
-      - key: GOOGLE_CALENDAR_ID
-        value: primary
       - key: HOST
         value: 0.0.0.0
 
