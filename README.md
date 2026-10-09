@@ -1,6 +1,6 @@
 # Wazito Schools
 
-A Django-powered school portal demo for school administrators, teachers, students, and parents. Django handles application logic and templates; Tornado serves HTTP requests through Django's WSGI application and serves static and uploaded media files.
+A Django-powered school portal demo for school administrators, teachers, students, and parents. Django handles application logic and templates; WhiteNoise serves static files, and Gunicorn runs the Django WSGI application in production.
 
 ## Features
 
@@ -26,7 +26,7 @@ source .env
 set +a
 python manage.py migrate --noinput
 python manage.py seed_school_data
-python -m config.tornado_server
+python manage.py runserver 127.0.0.1:8000
 ```
 
 The portal is available at <http://127.0.0.1:8000>. The `.env` file is sourced into the current shell because Django does not load it automatically. Keep local secrets in `.env`; do not commit credentials.
@@ -56,8 +56,7 @@ The application reads settings from environment variables. Add optional integrat
 | `DATABASE_URL` | Database connection URL | If omitted, SQLite is used. |
 | `SCHOOL_DB_PATH` | SQLite database file path | `db.sqlite3` in the project directory; ignored when `DATABASE_URL` is set. |
 | `SCHOOL_MEDIA_ROOT` | Directory for uploaded files | `media/` in the project directory. |
-| `HOST` / `PORT` | Tornado bind address and port | `127.0.0.1` / `8000`; deployments should provide a public bind address and port. |
-| `WSGI_MAX_WORKERS` | Worker threads for Tornado's Django WSGI container | `8` |
+| `PORT` | Web server port | `8000` locally; Render provides the production port. |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins | Empty; use full origins such as `https://portal.example.com`. |
 | `SECURE_SSL_REDIRECT` | Redirect HTTP requests to HTTPS | `false` |
 | `SECURE_HSTS_SECONDS` | HSTS duration in seconds | `0` |
@@ -86,15 +85,15 @@ To create the first administrator on a deployed instance, run `python manage.py 
 
 ## Project structure
 
-- `config/` – Django settings, URL configuration, WSGI application, and Tornado entry point.
+- `config/` – Django settings, URL configuration, and WSGI application.
 - `school/` – models, views, payment and Zoom integrations, tests, and management commands.
 - `templates/` – Django templates for portal pages.
-- `static/` – CSS and browser-side JavaScript served by Tornado.
+- `static/` – CSS and browser-side JavaScript collected and served by WhiteNoise.
 - `library/` – bundled library resources.
 - `render.yaml` – Render Blueprint for the web service, PostgreSQL database, and upload disk.
 
 ## Deploy on Render
 
-The Blueprint in `render.yaml` creates a paid web service, PostgreSQL database, and persistent disk for uploads. Review current Render pricing before applying it. Deploy through <https://render.com/deploy?repo=https://github.com/kbw033u-netizen/school-lms-platform> and apply the Blueprint. The build collects static files, the pre-deploy step runs migrations, and the web service starts Tornado with `python -m config.tornado_server`. Uploaded media is stored on the persistent disk. Demo accounts are not seeded in production.
+The Blueprint in `render.yaml` creates a paid web service, PostgreSQL database, and persistent disk for uploads. Review current Render pricing before applying it. Deploy through <https://render.com/deploy?repo=https://github.com/kbw033u-netizen/school-lms-platform> and apply the Blueprint. The build installs dependencies and collects static files, the pre-deploy step runs migrations, and Gunicorn serves Django on Render's assigned port. Render checks `/healthz`, which verifies that the app can reach its database. Uploaded media is stored on the persistent disk. Demo accounts are not seeded in production.
 
 After the first deploy, open the service Shell and run `python manage.py create_portal_admin`, then sign in and create staff accounts. Add Zoom or payment-provider credentials as Render environment variables if live integrations are required. Exam PDFs are stored under `media/exams/`.

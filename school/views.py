@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.core.exceptions import SuspiciousFileOperation
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from django.http import FileResponse, Http404
+from django.db import connection
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
@@ -16,6 +17,12 @@ from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, Suppo
 
 
 SUPPORT_PHONE = "0721954896"
+
+
+def health_check(request):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+    return HttpResponse("ok", content_type="text/plain")
 
 
 def index(request):

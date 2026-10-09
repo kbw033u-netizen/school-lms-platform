@@ -26,6 +26,13 @@ class PortalTests(TestCase):
             with self.subTest(page=page):
                 self.assertEqual(self.client.get(reverse(page)).status_code, 200)
 
+    def test_health_check_verifies_database_connectivity(self):
+        response = self.client.get(reverse("health_check"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"ok")
+        self.assertEqual(response["Content-Type"], "text/plain")
+
     def test_protected_pages_redirect_to_login(self):
         for page in ("dashboard", "billing"):
             with self.subTest(page=page):

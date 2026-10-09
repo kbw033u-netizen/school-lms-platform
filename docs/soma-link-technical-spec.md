@@ -23,18 +23,18 @@ Soma Link connects curriculum-aligned learning, teacher-led assessment, learner 
 
 1. **Web client:** Next.js App Router, React, TypeScript, Tailwind CSS, and a shared design-token package. Server-render public pages and curriculum discovery; use client components for the contest arena and scorebook interactions. Put authenticated API access behind a same-origin backend-for-frontend where practical.
 2. **Application API:** Django REST Framework, split into bounded Django apps: `accounts`, `curriculum`, `learning`, `assessment`, `contests`, `billing`, `notifications`, and `schools`. Version REST endpoints under `/api/v1/`.
-3. **Realtime:** Django Channels on Django's ASGI application with `channels_redis` and a Redis channel layer. Use Daphne or another ASGI-capable server for HTTP and WebSocket traffic. Channels WebSockets must not be routed through a WSGI-only bridge; Tornado's WSGIContainer cannot carry Django Channels WebSockets.
+3. **Realtime:** Django Channels on Django's ASGI application with `channels_redis` and a Redis channel layer. Use Daphne or another ASGI-capable server for HTTP and WebSocket traffic. Channels WebSockets must not be routed through a WSGI-only server.
 4. **Background work:** Celery workers and Celery Beat, backed by Redis or RabbitMQ, for contest scheduling, result aggregation, certificate generation, payment reconciliation, reminders, and media processing. HTTP requests and WebSocket consumers enqueue work; workers do not own authoritative contest state.
 5. **Data:** PostgreSQL as the system of record, with PostGIS for mapwork geometry and spatial questions. Redis is ephemeral coordination/cache/presence only, not the only copy of scores, payments, or contest submissions.
 6. **Media:** Store original video and documents in S3-compatible object storage or Cloudinary. Use a managed video pipeline (for example, Cloudinary, Mux, or Cloudflare Stream) to transcode to adaptive HLS/DASH, deliver through a CDN, and issue short-lived signed playback URLs. Do not proxy video bytes through Django.
 7. **Payments:** A provider adapter layer for Safaricom Daraja STK Push, Paystack, Flutterwave, and school vouchers. Persist every request, callback, state transition, and reconciliation result in an append-only audit trail.
-8. **Operations:** Containerized web, worker, scheduler, Redis, and database services; centralized logs, error reporting, metrics, traces, backups, and alerting. Use the deployment platform for process supervision; run the local demo HTTP service with the Tornado entrypoint.
+8. **Operations:** Containerized web, worker, scheduler, Redis, and database services; centralized logs, error reporting, metrics, traces, backups, and alerting. Use the deployment platform for process supervision; run the local demo HTTP service with Django's development server.
 
 ### Async ORM and WSGI safety
 
-Django REST views, Django Channels consumers, and Tornado WSGI handlers have different execution models. Keep the following boundary explicit:
+Django REST views, Django Channels consumers, and WSGI handlers have different execution models. Keep the following boundary explicit:
 
-- In synchronous DRF/Django views and a synchronous Django app hosted by Tornado's `WSGIContainer`, use the synchronous ORM normally. Do not call `asyncio.run()` from a request handler or wrap ordinary synchronous view work in an event loop.
+- In synchronous DRF/Django views hosted by a WSGI server, use the synchronous ORM normally. Do not call `asyncio.run()` from a request handler or wrap ordinary synchronous view work in an event loop.
 - In async Django views and Channels `AsyncConsumer`/`AsyncJsonWebsocketConsumer` methods, use Django's async ORM methods (`aget`, `acreate`, `aupdate`, async iteration) where supported. Never evaluate a lazy `QuerySet`, follow a lazy relation, or call a synchronous ORM method directly on the event-loop thread.
 - For ORM operations that need a synchronous transaction or are not supported by the async ORM, put the *whole database unit of work* in a synchronous service function and call it with `channels.db.database_sync_to_async`. This adapter also manages old database connections. Without Channels, use `asgiref.sync.sync_to_async` with `thread_sensitive=True` for a synchronous database function.
 - Return materialized values (IDs, dictionaries, immutable DTOs) from the sync boundary. Do not return a lazy `QuerySet` or model relation for later evaluation in async code. Keep `transaction.atomic()` and every query it governs inside the same synchronous service function.
@@ -65,7 +65,7 @@ def record_answer(*, attempt_id, item_id, answer):
     ...
 ```
 
-If a Tornado WSGI wrapper is retained for a legacy synchronous demo, keep that route tree synchronous and use it only for HTTP. The production Channels deployment is ASGI end-to-end (Daphne/Uvicorn); do not mount the Channels application inside `tornado.wsgi.WSGIContainer` or expect that WSGI bridge to support WebSockets.
+Keep synchronous Django views behind a WSGI server and Channels WebSockets on an ASGI server. Do not mount the Channels application inside a WSGI container or expect a WSGI server to support WebSockets.
 
 ### Contest event flow
 

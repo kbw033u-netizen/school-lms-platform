@@ -6,7 +6,8 @@ services:
     region: oregon
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate --noinput
-    startCommand: python -m config.tornado_server
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
+    healthCheckPath: /healthz
     disk:
       name: school-lms-uploads
       mountPath: /var/data
