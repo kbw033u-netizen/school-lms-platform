@@ -1,4 +1,5 @@
 from io import BytesIO
+import json
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -6,7 +7,17 @@ from unittest.mock import patch
 from datetime import datetime
 from django.utils import timezone
 
-from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
+from . import whatsapp
+from .models import (
+    Exam,
+    Invoice,
+    Payment,
+    PracticalAttendance,
+    ResourceMaterial,
+    SchoolClass,
+    SupportTicket,
+    User,
+)
 
 
 class PortalTests(TestCase):
@@ -34,10 +45,171 @@ class PortalTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/plain")
 
     def test_protected_pages_redirect_to_login(self):
-        for page in ("dashboard", "billing"):
+        for page in ("dashboard", "billing", "practical_exams", "practical_attendance"):
             with self.subTest(page=page):
                 response = self.client.get(reverse(page))
                 self.assertRedirects(response, reverse("login"))
+
+    def test_student_can_open_physics_practical_lab(self):
+        session = self.client.session
+        session["user_id"] = self.user.pk
+        session.save()
+
+        response = self.client.get(reverse("practical_exams"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Investigating a resistor")
+        self.assertContains(response, "circuit-canvas")
+        self.assertContains(response, "Record six pairs of readings")
+        self.assertContains(response, "Direct WhatsApp group messaging is not configured.")
+
+    def test_exams_page_includes_whatsapp_practical_invite(self):
+        response = self.client.get(reverse("exams"))
+
+        self.assertNotContains(response, "Send to WhatsApp group")
+
+    @patch("school.views.whatsapp.is_configured", return_value=True)
+    def test_configured_whatsapp_group_invite_button_posts_to_api(self, _is_configured):
+        session = self.client.session
+        session["user_id"] = self.user.pk
+        session.save()
+
+        response = self.client.get(reverse("practical_exams"))
+
+        self.assertContains(response, "Send to WhatsApp group")
+        self.assertContains(response, reverse("send_practical_whatsapp_invite"))
+
+    @patch("school.views.whatsapp.send_group_message")
+    def test_student_can_send_practical_invite_to_whatsapp_group(self, send_group_message):
+        session = self.client.session
+        session["user_id"] = self.user.pk
+        session.save()
+
+        response = self.client.post(reverse("send_practical_whatsapp_invite"), secure=True)
+
+        self.assertRedirects(response, reverse("practical_exams"), fetch_redirect_response=False)
+        send_group_message.assert_called_once()
+        self.assertIn("https://testserver/practical-exams", send_group_message.call_args.args[0])
+
+    def test_whatsapp_group_invite_requires_post_and_student_access(self):
+        response = self.client.get(reverse("send_practical_whatsapp_invite"))
+        self.assertEqual(response.status_code, 405)
+
+        session = self.client.session
+        session["user_id"] = self.user.pk
+        session.save()
+        response = self.client.post(reverse("send_practical_whatsapp_invite"))
+        self.assertRedirects(response, reverse("practical_exams"), fetch_redirect_response=False)
+
+    @patch.dict(
+        "os.environ",
+        {
+            "WHATSAPP_API_VERSION": "v99.0",
+            "WHATSAPP_PHONE_NUMBER_ID": "phone-id",
+            "WHATSAPP_ACCESS_TOKEN": "test-token",
+            "WHATSAPP_GROUP_ID": "group-id",
+        },
+    )
+    @patch("school.whatsapp.json.load", return_value={"messages": [{"id": "wamid.test"}]})
+    @patch("school.whatsapp.urllib.request.urlopen")
+    def test_whatsapp_api_sends_message_to_configured_group(self, urlopen, _json_load):
+        with urlopen.return_value as response:
+            self.assertEqual(whatsapp.send_group_message("Practical invite"), "wamid.test")
+
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(payload["recipient_type"], "group")
+        self.assertEqual(payload["to"], "group-id")
+        self.assertEqual(payload["text"]["body"], "Practical invite")
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_whatsapp_api_reports_missing_configuration(self):
+        self.assertFalse(whatsapp.is_configured())
+        with self.assertRaisesMessage(
+            whatsapp.WhatsAppAPIError,
+            "Direct WhatsApp group messaging is not configured.",
+        ):
+            whatsapp.send_group_message("Practical invite")
+
+    def test_parent_cannot_open_student_practical_lab(self):
+        parent = User(
+            email="parent@example.com",
+            first_name="Sam",
+            last_name="Njeri",
+            role="parent",
+        )
+        parent.set_password("parent-pass")
+        parent.save()
+        session = self.client.session
+        session["user_id"] = parent.pk
+        session.save()
+
+        response = self.client.get(reverse("practical_exams"))
+
+        self.assertRedirects(response, reverse("dashboard"))
+
+    def test_teacher_can_save_and_review_practical_attendance(self):
+        teacher = User.objects.create(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.pk
+        session.save()
+
+        response = self.client.get(reverse("practical_attendance"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Attendance for Aisha Njeri")
+
+        response = self.client.post(
+            reverse("practical_attendance"),
+            {
+                "session_date": "2026-10-09",
+                f"attendance_{self.user.pk}": "present",
+            },
+        )
+        self.assertRedirects(
+            response,
+            f"{reverse('practical_attendance')}?date=2026-10-09",
+            fetch_redirect_response=False,
+        )
+        attendance = PracticalAttendance.objects.get(student=self.user)
+        self.assertEqual(attendance.status, "present")
+        self.assertEqual(attendance.marked_by, teacher)
+
+        response = self.client.get(reverse("practical_attendance"), {"date": "2026-10-09"})
+        self.assertContains(response, "1</strong> present")
+        self.assertContains(response, "2026-10-09")
+
+    def test_practical_attendance_requires_staff_and_complete_valid_roster(self):
+        session = self.client.session
+        session["user_id"] = self.user.pk
+        session.save()
+        response = self.client.get(reverse("practical_attendance"))
+        self.assertRedirects(response, reverse("dashboard"))
+
+        teacher = User.objects.create(
+            email="teacher@example.com",
+            first_name="John",
+            last_name="Mwangi",
+            role="teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.pk
+        session.save()
+        response = self.client.post(
+            reverse("practical_attendance"),
+            {"session_date": "2026-10-09"},
+        )
+        self.assertRedirects(
+            response,
+            f"{reverse('practical_attendance')}?date=2026-10-09",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(PracticalAttendance.objects.count(), 0)
 
     def test_login_and_logout(self):
         response = self.client.post(

@@ -897,9 +897,451 @@ textarea:focus {
   text-align: center;
 }
 
+.practical-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #eef7f2;
+  border: 1px solid #cfe8d9;
+  border-radius: 8px;
+}
+
+.practical-entry h3 {
+  margin: 12px 0 6px;
+  color: var(--navy);
+}
+
+.practical-entry p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.practical-entry-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-whatsapp {
+  color: #ffffff;
+  background: #168c50;
+}
+
+.btn-whatsapp:hover {
+  color: #ffffff;
+  background: #117440;
+}
+
+.practical-heading {
+  max-width: 780px;
+}
+
+.practical-heading p {
+  max-width: 720px;
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.practical-notice {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 13px 16px;
+  color: #355166;
+  background: #eaf3f8;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.practical-notice strong {
+  flex-shrink: 0;
+  color: var(--navy);
+}
+
+.practical-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding: 15px 18px;
+  background: #eff8f2;
+  border: 1px solid #d0e8d7;
+  border-radius: 6px;
+}
+
+.practical-invite > div {
+  display: grid;
+  gap: 2px;
+}
+
+.practical-invite strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.practical-invite span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.attendance-panel {
+  padding: 22px;
+}
+
+.attendance-date-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attendance-date-filter label {
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.attendance-date-filter input,
+.attendance-table select {
+  min-height: 42px;
+  padding: 8px 11px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid #bdcbd1;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.attendance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block: 18px;
+}
+
+.attendance-summary span {
+  padding: 7px 11px;
+  color: #40576a;
+  background: #f3f7f8;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.attendance-summary strong {
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.attendance-table td {
+  white-space: normal;
+}
+
+.attendance-table td:last-child {
+  width: 180px;
+}
+
+.attendance-table select {
+  width: 100%;
+  min-width: 135px;
+  font-size: 13px;
+}
+
+.attendance-save {
+  margin-top: 18px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.practical-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.8fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.lab-bench,
+.practical-task,
+.rheostat-control,
+.results-panel {
+  padding: 22px;
+}
+
+.lab-bench {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lab-bench-heading,
+.results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lab-bench-heading h3,
+.results-heading h3 {
+  margin-bottom: 0;
+  color: var(--navy);
+}
+
+.lab-bench-heading .eyebrow,
+.results-heading .eyebrow {
+  margin-bottom: 6px;
+}
+
+.lab-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #247246;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lab-live span {
+  width: 9px;
+  aspect-ratio: 1;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 12%);
+}
+
+.circuit-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 18px;
+  border: 1px solid #dce6e9;
+  border-radius: 7px;
+}
+
+.meter-readings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.meter-readings > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #f3f7f8;
+  border-radius: 6px;
+}
+
+.meter-readings span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meter-readings strong {
+  color: var(--navy);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.apparatus-caption {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.practical-side {
+  display: grid;
+  gap: 16px;
+}
+
+.practical-task h3 {
+  margin-bottom: 12px;
+  color: var(--navy);
+}
+
+.practical-task ol {
+  padding-left: 20px;
+  color: #40576a;
+  font-size: 13px;
+}
+
+.practical-task li {
+  padding-left: 3px;
+  margin-bottom: 8px;
+}
+
+.task-data {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.task-data span {
+  color: var(--muted);
+}
+
+.task-data strong {
+  color: var(--navy);
+}
+
+.rheostat-control label {
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.rheostat-control > output {
+  display: block;
+  margin-top: 7px;
+  color: #1763bd;
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rheostat-control input[type="range"] {
+  width: 100%;
+  margin: 14px 0 4px;
+  accent-color: #1763bd;
+}
+
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rheostat-control > p:not(.form-error) {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rheostat-control .btn {
+  width: 100%;
+}
+
+.rheostat-control .btn:disabled,
+.answer-controls .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-error {
+  min-height: 20px;
+  margin: 7px 0 0;
+  color: #8a4b12;
+  font-size: 12px;
+}
+
+.results-panel {
+  margin-top: 20px;
+}
+
+.reading-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 17px;
+}
+
+.practical-table {
+  min-width: 600px;
+}
+
+.practical-table th,
+.practical-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-readings td {
+  color: var(--muted);
+  text-align: center;
+}
+
+.resistance-answer {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.resistance-answer > label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.answer-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.answer-controls input {
+  width: 140px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid #bdcbd1;
+  border-radius: 6px;
+}
+
+.answer-controls > span {
+  margin-left: -5px;
+  color: var(--muted);
+}
+
+.practical-result {
+  min-height: 24px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.practical-result.success {
+  color: #247246;
+}
+
+.practical-result.error {
+  color: #a42d2d;
+}
+
 @media (max-width: 900px) {
   .hero-inner {
     gap: 32px;
+  }
+
+  .practical-layout {
+    grid-template-columns: 1fr;
   }
 
   .feature-grid {
@@ -1013,6 +1455,67 @@ textarea:focus {
 
   .page-section {
     padding-block: 40px 54px;
+  }
+
+  .practical-entry {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 19px;
+  }
+
+  .practical-entry-actions {
+    width: 100%;
+  }
+
+  .practical-entry-actions .btn {
+    flex: 1;
+  }
+
+  .practical-notice {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .practical-invite {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .attendance-panel {
+    padding: 16px;
+  }
+
+  .lab-bench,
+  .practical-task,
+  .rheostat-control,
+  .results-panel {
+    padding: 16px;
+  }
+
+  .lab-bench-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .meter-readings {
+    gap: 6px;
+  }
+
+  .meter-readings > div {
+    padding: 8px;
+  }
+
+  .meter-readings strong {
+    font-size: 14px;
+  }
+
+  .answer-controls {
+    align-items: stretch;
+  }
+
+  .answer-controls .btn {
+    width: 100%;
   }
 }
 

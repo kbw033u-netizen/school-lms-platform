@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Practical Attendance | Wazito Schools{% endblock %}
+{% block content %}
+<section class="page-section practical-page">
+  <div class="container">
+    <div class="section-heading left practical-heading">
+      <span class="eyebrow">Teacher register</span>
+      <h2>Practical attendance</h2>
+      <p>Mark each active student as present or absent for the Physics resistor practical. Choose a session date to enter or review that day's register.</p>
+    </div>
+    <div class="practical-invite attendance-link">
+      <div><strong>Physics: investigating a resistor</strong><span>Attendance is saved separately for each session date.</span></div>
+      <a class="btn btn-light" href="{% url 'practical_exams' %}">Back to practical</a>
+    </div>
+    <section class="panel attendance-panel">
+      <form method="get" class="attendance-date-filter">
+        <label for="attendance-date">Session date</label>
+        <input id="attendance-date" type="date" name="date" value="{{ session_date }}" required>
+        <button class="btn btn-light" type="submit">View date</button>
+      </form>
+      <div class="attendance-summary" aria-live="polite">
+        <span><strong>{{ present_count }}</strong> present</span>
+        <span><strong>{{ absent_count }}</strong> absent</span>
+        <span><strong>{{ unmarked_count }}</strong> not marked</span>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="session_date" value="{{ session_date }}">
+        <div class="table-scroll">
+          <table class="data-table practical-table attendance-table">
+            <thead><tr><th scope="col">Student</th><th scope="col">Email</th><th scope="col">Attendance</th></tr></thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td>{{ row.student.first_name }} {{ row.student.last_name }}</td>
+                <td>{{ row.student.email }}</td>
+                <td>
+                  <label class="visually-hidden" for="attendance-{{ row.student.id }}">Attendance for {{ row.student.first_name }} {{ row.student.last_name }}</label>
+                  <select id="attendance-{{ row.student.id }}" name="attendance_{{ row.student.id }}" required>
+                    <option value="" {% if not row.status %}selected{% endif %} disabled>Choose status</option>
+                    <option value="present" {% if row.status == 'present' %}selected{% endif %}>Present</option>
+                    <option value="absent" {% if row.status == 'absent' %}selected{% endif %}>Absent</option>
+                  </select>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3">No active student accounts are available to mark.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if rows %}
+        <button class="btn btn-primary attendance-save" type="submit">Save attendance</button>
+        {% endif %}
+      </form>
+    </section>
+  </div>
+</section>
+{% endblock %}

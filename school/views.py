@@ -4,16 +4,27 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import SuspiciousFileOperation
+from django.db import transaction
 from django.db.models import Q
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods, require_POST
 
-from . import mpesa, paypal, stripe_card, zoom
-from .models import Exam, Invoice, Payment, ResourceMaterial, SchoolClass, SupportTicket, User
+from . import mpesa, paypal, stripe_card, whatsapp, zoom
+from .models import (
+    Exam,
+    Invoice,
+    Payment,
+    PracticalAttendance,
+    ResourceMaterial,
+    SchoolClass,
+    SupportTicket,
+    User,
+)
 
 
 SUPPORT_PHONE = "0721954896"
@@ -495,8 +506,120 @@ def exams_page(request):
     return render(
         request,
         "exams.html",
-        {"exams": Exam.objects.order_by("-id"), "is_staff": is_staff},
+        {
+            "exams": Exam.objects.order_by("-id"),
+            "is_staff": is_staff,
+            "whatsapp_configured": whatsapp.is_configured(),
+            "can_send_whatsapp": bool(user and user.role in ("student", "teacher", "admin")),
+        },
     )
+
+
+def practical_lab(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    if user.role not in ("student", "teacher", "admin"):
+        return redirect("dashboard")
+    return render(
+        request,
+        "practical_lab.html",
+        {"user": user, "whatsapp_configured": whatsapp.is_configured()},
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def practical_attendance(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    if user.role not in ("teacher", "admin"):
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        session_date = parse_date(request.POST.get("session_date", ""))
+        if not session_date:
+            messages.error(request, "Choose a valid date for this practical session.")
+            return redirect("practical_attendance")
+        students = list(User.objects.filter(role="student", is_active=True).order_by("last_name", "first_name", "id"))
+        submitted_ids = set(request.POST.keys()) - {"csrfmiddlewaretoken", "session_date"}
+        expected_ids = {f"attendance_{student.pk}" for student in students}
+        if submitted_ids != expected_ids:
+            messages.error(request, "Attendance was not saved. Reload the register and mark every listed student.")
+            return redirect(f"{request.path}?date={session_date.isoformat()}")
+
+        statuses = {
+            key.removeprefix("attendance_"): request.POST.get(key, "")
+            for key in expected_ids
+        }
+        if any(status not in dict(PracticalAttendance.STATUS_CHOICES) for status in statuses.values()):
+            messages.error(request, "Attendance was not saved. Choose Present or Absent for every student.")
+            return redirect(f"{request.path}?date={session_date.isoformat()}")
+
+        with transaction.atomic():
+            for student in students:
+                PracticalAttendance.objects.update_or_create(
+                    student=student,
+                    practical="Physics: investigating a resistor",
+                    session_date=session_date,
+                    defaults={
+                        "status": statuses[str(student.pk)],
+                        "marked_by": user,
+                    },
+                )
+        messages.success(request, f"Attendance saved for {session_date:%d %B %Y}.")
+        return redirect(f"{request.path}?date={session_date.isoformat()}")
+
+    session_date = parse_date(request.GET.get("date", "")) or timezone.localdate()
+    students = User.objects.filter(role="student", is_active=True).order_by("last_name", "first_name", "id")
+    attendance_by_student = {
+        record.student_id: record.status
+        for record in PracticalAttendance.objects.filter(
+            practical="Physics: investigating a resistor",
+            session_date=session_date,
+            student__in=students,
+        )
+    }
+    rows = [
+        {
+            "student": student,
+            "status": attendance_by_student.get(student.pk, ""),
+        }
+        for student in students
+    ]
+    return render(
+        request,
+        "practical_attendance.html",
+        {
+            "rows": rows,
+            "session_date": session_date.isoformat(),
+            "present_count": sum(row["status"] == "present" for row in rows),
+            "absent_count": sum(row["status"] == "absent" for row in rows),
+            "unmarked_count": sum(not row["status"] for row in rows),
+        },
+    )
+
+
+@require_POST
+def send_practical_whatsapp_invite(request):
+    user = _current_user(request)
+    if not user:
+        return redirect("login")
+    if user.role not in ("student", "teacher", "admin"):
+        return redirect("dashboard")
+
+    practical_url = request.build_absolute_uri("/practical-exams")
+    message = (
+        "Physics practical practice: investigate the current-voltage relationship "
+        f"in the virtual lab: {practical_url}"
+    )
+    try:
+        whatsapp.send_group_message(message)
+    except whatsapp.WhatsAppAPIError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, "Practical invitation sent to the WhatsApp group.")
+    return redirect("practical_exams")
 
 
 @require_http_methods(["GET", "POST"])

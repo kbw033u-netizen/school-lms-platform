@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Physics Practical Lab | Wazito Schools{% endblock %}
+{% block content %}
+<section class="page-section practical-page">
+  <div class="container">
+    <div class="section-heading left practical-heading">
+      <span class="eyebrow">Interactive physics practical</span>
+      <h2>Investigating a resistor</h2>
+      <p>Explore how potential difference and current change as you adjust the rheostat. Record six readings, then estimate the resistance.</p>
+    </div>
+
+    <div class="practical-notice"><strong>Practice simulation</strong><span>This is an original revision activity inspired by common KCSE Physics practical skills. It is not an official KNEC examination paper.</span></div>
+    {% if user.role == 'teacher' or user.role == 'admin' %}
+    <div class="practical-invite attendance-link">
+      <div><strong>Practical attendance</strong><span>Record which students attended and which were absent.</span></div>
+      <a class="btn btn-primary" href="{% url 'practical_attendance' %}">Open attendance register</a>
+    </div>
+    {% endif %}
+    <div class="practical-invite">
+      <div><strong>Invite your study group</strong><span>Send this practical directly to the <b>prac_time</b> WhatsApp group.</span></div>
+      {% if whatsapp_configured %}
+      <form method="post" action="{% url 'send_practical_whatsapp_invite' %}">{% csrf_token %}
+        <button class="btn btn-whatsapp" type="submit">Send to WhatsApp group</button>
+      </form>
+      {% else %}
+      <span class="whatsapp-unconfigured">Direct WhatsApp group messaging is not configured.</span>
+      {% endif %}
+    </div>
+
+    <div class="practical-layout">
+      <section class="lab-bench panel" aria-labelledby="apparatus-heading">
+        <div class="lab-bench-heading">
+          <div><span class="eyebrow">Virtual workbench</span><h3 id="apparatus-heading">Circuit and measuring instruments</h3></div>
+          <span class="lab-live"><span></span> Circuit live</span>
+        </div>
+        <canvas class="circuit-canvas" id="circuit-canvas" width="1000" height="560" role="img" aria-label="Isometric virtual circuit with a battery, rheostat, 10 ohm resistor, ammeter, and voltmeter. Meter readings change when the rheostat is adjusted.">
+          Your browser does not support the canvas used to draw the virtual circuit.
+        </canvas>
+        <div class="meter-readings" aria-label="Live circuit readings">
+          <div><span>Voltmeter</span><strong><output id="voltage-reading">3.00</output> V</strong></div>
+          <div><span>Ammeter</span><strong><output id="current-reading">0.30</output> A</strong></div>
+          <div><span>Rheostat</span><strong><output id="resistance-reading">0</output> Ω</strong></div>
+        </div>
+        <p class="apparatus-caption">The voltmeter is connected across the 10 Ω test resistor; the ammeter measures the series current.</p>
+      </section>
+
+      <aside class="practical-side">
+        <section class="panel practical-task">
+          <span class="eyebrow">Task</span>
+          <h3>Determine the resistance</h3>
+          <ol>
+            <li>Adjust the rheostat to obtain different current values.</li>
+            <li>Read the voltmeter and ammeter for each setting.</li>
+            <li>Record six pairs of readings in your results table.</li>
+            <li>Use your observations to estimate the resistor's resistance.</li>
+          </ol>
+          <div class="task-data"><span>Supply voltage</span><strong>3.0 V</strong><span>Test resistor</span><strong>10 Ω</strong></div>
+        </section>
+
+        <section class="panel rheostat-control">
+          <label for="rheostat-slider">Adjust the rheostat</label>
+          <output id="slider-value" for="rheostat-slider">0 Ω</output>
+          <input id="rheostat-slider" type="range" min="0" max="25" step="5" value="0" aria-describedby="rheostat-help">
+          <div class="range-labels"><span>0 Ω</span><span>25 Ω</span></div>
+          <p id="rheostat-help">Change the slider, observe both meters, then add the reading to your table.</p>
+          <button class="btn btn-primary" type="button" id="record-reading">Record reading</button>
+          <p class="form-error" id="record-feedback" role="status" aria-live="polite"></p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel results-panel" aria-labelledby="results-heading">
+      <div class="results-heading">
+        <div><span class="eyebrow">Observations</span><h3 id="results-heading">Results table</h3></div>
+        <span class="reading-count" id="reading-count">0 of 6 readings</span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table practical-table">
+          <thead><tr><th scope="col">No.</th><th scope="col">Rheostat (Ω)</th><th scope="col">Potential difference, V (V)</th><th scope="col">Current, I (A)</th><th scope="col">V / I (Ω)</th></tr></thead>
+          <tbody id="readings-body"><tr class="empty-readings"><td colspan="5">Adjust the rheostat and record your first reading.</td></tr></tbody>
+        </table>
+      </div>
+      <form class="resistance-answer" id="resistance-form">
+        <label for="resistance-answer">Your estimate of the resistor's resistance</label>
+        <div class="answer-controls">
+          <input id="resistance-answer" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 10.0" required>
+          <span>Ω</span>
+          <button class="btn btn-primary" type="submit" id="submit-practical" disabled>Check my result</button>
+          <button class="btn btn-light" type="button" id="reset-practical">Reset practical</button>
+        </div>
+        <p class="practical-result" id="practical-result" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+</section>
+<script src="/static/practical-lab.js" defer></script>
+{% endblock %}

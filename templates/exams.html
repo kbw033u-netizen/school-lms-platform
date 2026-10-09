@@ -4,6 +4,17 @@
 {% block content %}
 <section class="page-section"><div class="container">
   <div class="section-heading left"><span class="eyebrow">Assessment</span><h2>Exam papers</h2></div>
+  <article class="practical-entry">
+    <div><span class="tag success">Interactive practice</span><h3>Physics: current-voltage relationship</h3><p>Use a virtual circuit and meters to investigate a resistor's resistance.</p></div>
+    <div class="practical-entry-actions">
+      <a class="btn btn-primary" href="{% url 'practical_exams' %}">Open practical lab</a>
+      {% if whatsapp_configured and can_send_whatsapp %}
+      <form method="post" action="{% url 'send_practical_whatsapp_invite' %}">{% csrf_token %}
+        <button class="btn btn-whatsapp" type="submit">Send to WhatsApp group</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
   {% if is_staff %}
   <div class="panel full-width">
     <h3>Upload exam PDF</h3>

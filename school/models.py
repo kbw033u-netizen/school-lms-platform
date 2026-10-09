@@ -111,6 +111,36 @@ class Exam(models.Model):
         return self.title
 
 
+class PracticalAttendance(models.Model):
+    STATUS_CHOICES = [
+        ("present", "Present"),
+        ("absent", "Absent"),
+    ]
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="practical_attendance")
+    practical = models.CharField(max_length=100, default="Physics: investigating a resistor")
+    session_date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    marked_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="marked_practical_attendance",
+    )
+    marked_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("student", "practical", "session_date"),
+                name="unique_student_practical_attendance_per_day",
+            ),
+        ]
+        ordering = ("student__last_name", "student__first_name")
+
+    def __str__(self):
+        return f"{self.student} - {self.practical} ({self.status})"
+
+
 class SupportTicket(models.Model):
     user_name = models.CharField(max_length=200)
     user_email = models.EmailField()
